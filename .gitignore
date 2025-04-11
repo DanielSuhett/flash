@@ -52,3 +52,5 @@ temp/
 .github/workflows/.cache/
 .secrets/
 .DS_Store
+.actrc
+.secrets
