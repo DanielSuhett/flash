@@ -1,13 +1,30 @@
 import * as core from '@actions/core';
-import { ActionConfig } from '../types/index.js';
+import { ActionConfig, LlmProvider } from '../types/index.js';
 
 export function loadActionConfig(): ActionConfig {
   return {
     githubToken: core.getInput('github-token', { required: true }),
-    llmApiKey: core.getInput('llm-api-key', { required: true }),
-    llmEndpoint: core.getInput('llm-endpoint', { required: false }) || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-    autoApprove: core.getBooleanInput('auto-approve', { required: false }),
-    autoMerge: core.getBooleanInput('auto-merge', { required: false }),
-    indexCacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false })
+    llm: {
+      provider: core.getInput('llm-provider', { required: true }) as LlmProvider,
+      apiKey: core.getInput('llm-api-key', { required: true }),
+      endpoint:
+        core.getInput('llm-endpoint', { required: false }) ||
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+      model: core.getInput('llm-model', { required: true }),
+    },
+    analysis: {
+      enableMetrics: core.getBooleanInput('enable-metrics', { required: false }),
+      enableSecurity: core.getBooleanInput('enable-security', { required: false }),
+      enablePerformance: core.getBooleanInput('enable-performance', { required: false }),
+      enableDocumentation: core.getBooleanInput('enable-documentation', { required: false }),
+      enableTestCoverage: core.getBooleanInput('enable-test-coverage', { required: false }),
+    },
+    review: {
+      autoApprove: core.getBooleanInput('auto-approve', { required: false }),
+      autoMerge: core.getBooleanInput('auto-merge', { required: false }),
+    },
+    index: {
+      cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
+    },
   };
-} 
+}

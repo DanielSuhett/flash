@@ -18,15 +18,16 @@ export class WorkflowService {
     this.config = config;
     this.githubService = new GitHubService(config.githubToken);
     this.codeIndexer = new CodeIndexer(config.githubToken);
-    
+
     const llmConfig: LlmConfig = {
       provider: config.llm.provider,
       apiKey: config.llm.apiKey,
       endpoint: config.llm.endpoint,
-      model: config.llm.model
+      model: config.llm.model,
     };
-    
+
     const llmService = createLlmService(llmConfig);
+
     this.llmService = new LLMService(config.llm.apiKey, config.llm.endpoint);
     this.analysisService = new AnalysisService(config.analysis, llmService);
   }
@@ -34,15 +35,17 @@ export class WorkflowService {
   async processReview(owner: string, repo: string, prNumber: number): Promise<void> {
     try {
       core.info(`Starting review for PR #${prNumber} in ${owner}/${repo}`);
-      
+
       const pullRequestInfo = await this.githubService.getPullRequestInfo(owner, repo, prNumber);
+
       core.info(`Analyzing PR: ${pullRequestInfo.title}`);
-      
+
       const prWithContents = await this.githubService.loadFileContents(pullRequestInfo);
+
       core.info(`Loaded content for ${prWithContents.files.length} changed files`);
-      
-      const changedFiles = pullRequestInfo.files.map(file => file.filename);
-      
+
+      const changedFiles = pullRequestInfo.files.map((file) => file.filename);
+
       core.info('Indexing codebase structure...');
       const indexedCodebase = await this.codeIndexer.indexCodebase(
         owner,
@@ -50,24 +53,28 @@ export class WorkflowService {
         pullRequestInfo.baseBranch,
         changedFiles
       );
-      
+
       core.info('Performing code analysis...');
       const analysisResult = await this.analysisService.analyzeCodebase(indexedCodebase);
-      
+
       core.info('Performing code review with LLM...');
       const reviewResult = await this.llmService.performCodeReview({
         indexedCodebase,
-        pullRequest: prWithContents
+        pullRequest: prWithContents,
       });
-      
+
       core.info('Posting review results...');
       await this.postReviewComment(pullRequestInfo, reviewResult, analysisResult);
-      
-      if (this.config.review.autoApprove && reviewResult.approvalRecommended && this.shouldAutoApprove(analysisResult)) {
+
+      if (
+        this.config.review.autoApprove &&
+        reviewResult.approvalRecommended &&
+        this.shouldAutoApprove(analysisResult)
+      ) {
         core.info('Auto-approval is enabled and recommended. Processing...');
         await this.approveAndMergePR(pullRequestInfo);
       }
-      
+
       core.info('Code review completed successfully');
     } catch (error) {
       core.error(`Error during review process: ${error}`);
@@ -89,98 +96,89 @@ export class WorkflowService {
   }
 
   private async postReviewComment(
-    pullRequestInfo: PullRequestInfo, 
+    pullRequestInfo: PullRequestInfo,
     reviewResult: CodeReviewResult,
     analysisResult: ReviewResult
   ): Promise<void> {
     const { owner, repo, prNumber } = pullRequestInfo;
-    
-    let commentBody = `# TypeScript Deep Code Review\n\n`;
-    
-    commentBody += `## Summary\n${reviewResult.summary}\n\n`;
-    commentBody += `**Overall Quality Score**: ${reviewResult.overallQuality}/100\n`;
-    commentBody += `**Recommendation**: ${reviewResult.approvalRecommended ? '✅ Approve' : '❌ Needs Improvement'}\n\n`;
-    
-    commentBody += `## Code Analysis Metrics\n\n`;
-    commentBody += `- **Complexity**: ${analysisResult.metrics.complexity}/10\n`;
-    commentBody += `- **Maintainability**: ${analysisResult.metrics.maintainability}/10\n`;
-    commentBody += `- **Test Coverage**: ${analysisResult.metrics.testCoverage}%\n`;
-    commentBody += `- **Documentation Coverage**: ${analysisResult.metrics.documentationCoverage}%\n`;
-    commentBody += `- **Security Score**: ${analysisResult.metrics.securityScore}/10\n`;
-    commentBody += `- **Performance Score**: ${analysisResult.metrics.performanceScore}/10\n\n`;
-    
-    if (analysisResult.suggestions.length > 0) {
-      commentBody += `## Analysis Suggestions\n\n`;
-      for (const suggestion of analysisResult.suggestions) {
-        commentBody += `- ${suggestion}\n`;
-      }
-      commentBody += '\n';
-    }
-    
+    const comment = this.buildReviewComment(reviewResult, analysisResult);
+
+    await this.githubService.createComment(owner, repo, prNumber, comment);
+  }
+
+  private buildReviewComment(reviewResult: CodeReviewResult, analysisResult: ReviewResult): string {
+    const summary = this.buildSummarySection(reviewResult);
+    const suggestions = this.buildSuggestionsSection(reviewResult);
+    const metrics = this.buildMetricsSection(analysisResult);
+    const issues = this.buildIssuesSection(analysisResult);
+
+    return `${summary}\n\n${suggestions}\n\n${metrics}\n\n${issues}`;
+  }
+
+  private buildSummarySection(reviewResult: CodeReviewResult): string {
+    return `## Code Review Summary\n\n${reviewResult.summary}\n\nOverall Quality Score: ${
+      reviewResult.overallQuality
+    }/100`;
+  }
+
+  private buildSuggestionsSection(reviewResult: CodeReviewResult): string {
+    return `## Suggested Improvements\n\n${reviewResult.comments
+      .filter((comment) => comment.severity === 'suggestion')
+      .map((comment) => `- ${comment.message}`)
+      .join('\n')}`;
+  }
+
+  private buildMetricsSection(analysisResult: ReviewResult): string {
+    return `## Code Metrics\n\n- Complexity: ${analysisResult.metrics.complexity}\n- Maintainability: ${
+      analysisResult.metrics.maintainability
+    }\n- Test Coverage: ${analysisResult.metrics.testCoverage}%`;
+  }
+
+  private buildIssuesSection(analysisResult: ReviewResult): string {
+    const sections = [];
+
     if (analysisResult.securityIssues.length > 0) {
-      commentBody += `## Security Issues\n\n`;
-      for (const issue of analysisResult.securityIssues) {
-        commentBody += `- 🔴 ${issue}\n`;
-      }
-      commentBody += '\n';
+      sections.push(
+        `### Security Issues\n\n${analysisResult.securityIssues
+          .map((issue) => `- ${issue}`)
+          .join('\n')}`
+      );
     }
-    
+
     if (analysisResult.performanceIssues.length > 0) {
-      commentBody += `## Performance Issues\n\n`;
-      for (const issue of analysisResult.performanceIssues) {
-        commentBody += `- 🚀 ${issue}\n`;
-      }
-      commentBody += '\n';
+      sections.push(
+        `### Performance Issues\n\n${analysisResult.performanceIssues
+          .map((issue) => `- ${issue}`)
+          .join('\n')}`
+      );
     }
-    
+
     if (analysisResult.documentationIssues.length > 0) {
-      commentBody += `## Documentation Issues\n\n`;
-      for (const issue of analysisResult.documentationIssues) {
-        commentBody += `- 📝 ${issue}\n`;
-      }
-      commentBody += '\n';
+      sections.push(
+        `### Documentation Issues\n\n${analysisResult.documentationIssues
+          .map((issue) => `- ${issue}`)
+          .join('\n')}`
+      );
     }
-    
+
     if (analysisResult.testCoverageIssues.length > 0) {
-      commentBody += `## Test Coverage Issues\n\n`;
-      for (const issue of analysisResult.testCoverageIssues) {
-        commentBody += `- ✅ ${issue}\n`;
-      }
-      commentBody += '\n';
+      sections.push(
+        `### Test Coverage Issues\n\n${analysisResult.testCoverageIssues
+          .map((issue) => `- ${issue}`)
+          .join('\n')}`
+      );
     }
-    
-    if (reviewResult.comments.length > 0) {
-      commentBody += `## Detailed Code Review\n\n`;
-      
-      for (const comment of reviewResult.comments) {
-        const locationInfo = comment.startLine 
-          ? `lines ${comment.startLine}-${comment.endLine || comment.startLine}` 
-          : '';
-          
-        const severity = {
-          'error': '🔴 ERROR',
-          'warning': '🟠 WARNING',
-          'info': '🔵 INFO',
-          'suggestion': '💡 SUGGESTION'
-        }[comment.severity];
-        
-        commentBody += `### ${severity}: ${comment.file} ${locationInfo}\n`;
-        commentBody += `**Category**: ${comment.category}\n\n`;
-        commentBody += `${comment.message}\n\n`;
-      }
-    }
-    
-    commentBody += `---\n*This review was automatically generated by the TypeScript Deep Code Review GitHub Action.*`;
-    
-    await this.githubService.createComment(owner, repo, prNumber, commentBody);
+
+    return sections.join('\n\n');
   }
 
   private async approveAndMergePR(pullRequestInfo: PullRequestInfo): Promise<void> {
     const { owner, repo, prNumber } = pullRequestInfo;
+
     await this.githubService.approvePullRequest(owner, repo, prNumber);
-    
+
     if (this.config.review.autoMerge) {
       await this.githubService.mergePullRequest(owner, repo, prNumber);
     }
   }
-} 
+}

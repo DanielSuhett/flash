@@ -1,9 +1,8 @@
-import { LlmConfig, FileFilterConfig, AnalysisConfig, ReviewConfig, IndexConfig } from './config.js'
+import { LlmConfig, AnalysisConfig, ReviewConfig, IndexConfig } from './config.js';
 
 export interface ActionConfig {
   githubToken: string;
   llm: LlmConfig;
-  fileFilter: FileFilterConfig;
   analysis: AnalysisConfig;
   review: ReviewConfig;
   index: IndexConfig;
@@ -83,4 +82,6 @@ export interface CodeReviewComment {
   severity: 'error' | 'warning' | 'info' | 'suggestion';
   message: string;
   category: 'security' | 'performance' | 'maintainability' | 'logic' | 'style';
-} 
+}
+
+export type LlmProvider = 'gemini' | 'openai' | 'anthropic';

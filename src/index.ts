@@ -17,6 +17,7 @@ async function run(): Promise<void> {
       }
     } else if (context.eventName === 'workflow_dispatch') {
       const inputPrNumber = core.getInput('pr-number');
+
       if (!inputPrNumber) {
         throw new Error('PR number is required for manual triggering');
       }
@@ -25,10 +26,13 @@ async function run(): Promise<void> {
         throw new Error('Invalid PR number provided');
       }
     } else {
-      throw new Error('This action can only be triggered by pull_request or workflow_dispatch events');
+      throw new Error(
+        'This action can only be triggered by pull_request or workflow_dispatch events'
+      );
     }
 
     const workflowService = new WorkflowService(config);
+
     await workflowService.processReview(owner, repo, prNumber);
   } catch (error) {
     if (error instanceof Error) {
@@ -39,4 +43,4 @@ async function run(): Promise<void> {
   }
 }
 
-run(); 
+run();
