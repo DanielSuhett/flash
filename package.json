@@ -1,0 +1,38 @@
+{
+  "name": "ts-deep-code-review",
+  "version": "1.0.0",
+  "description": "GitHub Action for deep code review of TypeScript Pull Requests with LLM and Jira integration",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map",
+    "test": "jest",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write '**/*.ts'",
+    "all": "npm run format && npm run lint && npm run build && npm test"
+  },
+  "keywords": [
+    "github",
+    "action",
+    "typescript",
+    "code-review",
+    "llm",
+    "jira"
+  ],
+  "author": "ProjectR",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1",
+    "@octokit/rest": "^19.0.7",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.2",
+    "@types/node": "^20.2.5",
+    "@vercel/ncc": "^0.36.1",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.1.3"
+  }
+}

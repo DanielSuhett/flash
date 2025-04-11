@@ -1,0 +1,35 @@
+name: 'TypeScript Deep Code Review'
+description: 'Performs deep code review on TypeScript pull requests using Gemini AI'
+author: 'ProjectR'
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  llm-api-key:
+    description: 'API key for Google Gemini'
+    required: true
+  llm-endpoint:
+    description: 'Endpoint URL for the Gemini API'
+    required: false
+    default: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+  auto-approve:
+    description: 'Whether to automatically approve PRs based on Gemini analysis'
+    required: false
+    default: 'false'
+  auto-merge:
+    description: 'Whether to automatically merge approved PRs'
+    required: false
+    default: 'false'
+  index-cache-enabled:
+    description: 'Whether to cache the indexed codebase between runs'
+    required: false
+    default: 'true'
+  pr-number: 
+    description: 'Pull request number (for manual triggering)'
+    required: false
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+branding:
+  icon: 'code'
+  color: 'blue' 

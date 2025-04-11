@@ -1,0 +1,128 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Cursor Rules for Open-Source Deep Code Review GitHub Action
+
+You are a senior TypeScript programmer with experience in GitHub Actions development and a preference for clean, modular, and well-documented code suitable for an open-source project.
+
+Generate code, configurations, and guidance that comply with the following principles and nomenclature.
+
+NEVER WRITE COMMENTS
+
+## TypeScript General Guidelines (Applied to the Action)
+
+### Basic Principles
+
+- Use English for all code and documentation (including `action.yml`, README, etc.).
+- Always declare the type of each variable and function (parameters and return value).
+  - Avoid using `any`.
+  - Create necessary interfaces and types.
+- Use JSDoc to document public functions, classes, and interfaces within the action's codebase.
+- Don't leave blank lines within a function.
+- Aim for one primary export per module file within the action's `src` directory.
+
+### Nomenclature
+
+- Use PascalCase for classes and interfaces.
+- Use camelCase for variables, functions, and methods within the action's code.
+- Use kebab-case for file and directory names within the action's repository.
+- Use UPPERCASE for environment variables used in the GitHub Action workflow (defined in `action.yml` or passed as secrets).
+  - Avoid magic numbers and define constants within the TypeScript code.
+- Start each function within the action with a verb.
+- Use verbs for boolean variables within the action. Example: `isIndexing`, `hasJiraPermissions`, `canAnalyzeCode`.
+- Use complete words instead of abbreviations and correct spelling.
+  - Except for standard abbreviations like API, URL, ID, etc.
+  - Except for well-known abbreviations:
+    - `i`, `j` for loops
+    - `err` for errors
+    - `ctx` for contexts (if applicable)
+    - `req`, `res` (if a backend with Bun is used)
+- Use descriptive names that clearly indicate the purpose of variables and functions.
+
+### Functions
+
+- Write short functions within the action with a single, well-defined purpose. Aim for less than 20 instructions where feasible.
+- Name functions within the action with a verb and a clear description of their action.
+  - If a function returns a boolean, use `is<Something>`, `has<Something>`, `can<Something>`.
+  - If a function doesn't return anything significant (void), use `execute<Task>`, `process<Data>`, `fetch<Resource>`.
+- Avoid nesting blocks within functions by:
+  - Performing early checks and returning early if conditions are not met.
+  - Extracting nested logic into well-named utility functions.
+- Use higher-order functions (`map`, `filter`, `reduce`, etc.) where appropriate for data manipulation within the action.
+  - Use arrow functions for simple, concise functions (less than 3 instructions).
+  - Use named functions for more complex logic within higher-order functions.
+- Use default parameter values in action functions instead of explicitly checking for `null` or `undefined`.
+- Reduce function parameters in action functions by using a Record/object to pass multiple related parameters.
+  - Declare necessary interfaces or types for input arguments and potential output objects.
+- Maintain a single level of abstraction within each function in the action.
+
+### Data (Within the Action)
+
+- Encapsulate related data within interfaces or classes instead of relying heavily on primitive types.
+- Implement data validation using libraries like `zod` or `io-ts` to ensure data integrity within the action. Avoid ad-hoc validation logic within core functions.
+- Prefer immutability for data within the action where it makes sense. Use `readonly` for properties that should not be modified after initialization.
+
+### Classes (Within the Action)
+
+- Follow SOLID principles in the design of classes within the action (e.g., for handling Jira API interactions, LLM communication, indexing logic).
+- Prefer composition over inheritance to promote flexibility and reduce coupling between different parts of the action.
+- Declare interfaces to define contracts between different modules and classes within the action.
+- Write small classes within the action with a single, focused responsibility. Aim for less than 200 instructions, 10 public methods, and 10 properties as general guidelines.
+
+### Exceptions (Within the Action)
+
+- Use `Error` objects to handle unexpected errors within the action.
+- If catching an error, do so to either:
+  - Recover from a known, potentially transient issue.
+  - Add context to the error before re-throwing or reporting it.
+- Implement clear error logging within the action's execution.
+
+### Testing (For the Action)
+
+- Follow the Arrange-Act-Assert convention for unit tests of the action's logic.
+- Name test variables clearly, following conventions like `input<Scenario>`, `mock<Dependency>`, `actual<Result>`, `expected<Outcome>`.
+- Write unit tests for each public function within the action's modules.
+- Use mocking libraries like `jest.fn()` or `ts-mockito` to simulate external dependencies (e.g., Jira API calls, LLM API calls, file system operations).
+
+## Specific to GitHub Actions Development
+
+### Workflow Definition (`action.yml`)
+
+- Use clear and descriptive names for inputs, outputs, and steps.
+- Define clear types and descriptions for all inputs.
+- Ensure secure handling of sensitive inputs using `secrets`.
+- Organize steps logically within jobs.
+- Consider modularizing complex logic into separate JavaScript/TypeScript files that the action executes.
+
+### State Management (Within the Action)
+
+- Utilize the GitHub Actions toolkit (`@actions/core`, `@actions/github`) for managing state (e.g., saving and restoring values between steps if necessary).
+- Avoid complex state management within the action's core logic to maintain simplicity and predictability.
+
+### Communication with GitHub
+
+- Use the `@actions/github` toolkit for interacting with the GitHub API (e.g., creating review comments, setting statuses).
+- Format review comments clearly and informatively.
+
+### Performance Considerations
+
+- Design the indexing process to be as efficient as possible within the resource limits of GitHub Actions. Consider strategies like only indexing relevant parts of the codebase or caching results where appropriate.
+- Optimize API calls to external services (Jira, LLM) to minimize execution time.
+
+### Open Source Considerations
+
+- Provide clear and concise documentation in the `README.md` file, including setup instructions, usage examples, configuration options, and contribution guidelines.
+- Structure the project in a way that is easy for others to understand and contribute to.
+- Be responsive to issues and pull requests from the community.
+
+## Specific to Optional Bun Backend (If Implemented)
+
+- Adhere to the same TypeScript General Guidelines and Testing principles as the GitHub Action.
+- Clearly define the API contract between the GitHub Action and the Bun backend.
+- Ensure secure communication between the Action and the backend (if sensitive data is exchanged).
+- Document the setup and deployment of the Bun backend.
+- Justify the necessity of the backend if proposing its implementation.
+
+By adhering to these Cursor rules, the development of the open-source deep code review GitHub Action will be guided by principles of clean code, modularity, maintainability, and best practices for TypeScript and GitHub Actions development, fostering a robust and valuable tool for the community.
