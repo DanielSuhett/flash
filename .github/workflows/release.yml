@@ -37,21 +37,18 @@ jobs:
           test -f dist/index.js
           test -f dist/index.js.map
 
-      - name: Create release package
+      - name: Prepare release files
         run: |
-          mkdir -p release
-          cp dist/index.js release/
-          cp dist/index.js.map release/
-          cp action.yml release/
-          ls -la release/
+          cp dist/index.js .
+          cp dist/index.js.map .
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release/index.js
-            release/index.js.map
-            release/action.yml
+            index.js
+            index.js.map
+            action.yml
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
