@@ -56,7 +56,7 @@ inputs:
     default: 'true'
 runs:
   using: 'node20'
-  main: 'index.js'
+  main: 'release/index.js'
 branding:
   icon: 'code'
   color: 'blue' 
