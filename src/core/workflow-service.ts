@@ -3,18 +3,32 @@ import { ActionConfig, CodeReviewResult, PullRequestInfo } from '../types/index.
 import { GitHubService } from '../github/github-service.js';
 import { CodeIndexer } from '../indexing/indexer.js';
 import { LLMService } from '../llm/llm-service.js';
+import { AnalysisService } from './analysis-service.js';
+import { createLlmService } from '../llm/llm-service.js';
+import { LlmConfig, ReviewResult } from '../types/config.js';
 
 export class WorkflowService {
   private config: ActionConfig;
   private githubService: GitHubService;
   private codeIndexer: CodeIndexer;
   private llmService: LLMService;
+  private analysisService: AnalysisService;
 
   constructor(config: ActionConfig) {
     this.config = config;
     this.githubService = new GitHubService(config.githubToken);
     this.codeIndexer = new CodeIndexer(config.githubToken);
-    this.llmService = new LLMService(config.llmApiKey, config.llmEndpoint);
+    
+    const llmConfig: LlmConfig = {
+      provider: config.llm.provider,
+      apiKey: config.llm.apiKey,
+      endpoint: config.llm.endpoint,
+      model: config.llm.model
+    };
+    
+    const llmService = createLlmService(llmConfig);
+    this.llmService = new LLMService(config.llm.apiKey, config.llm.endpoint);
+    this.analysisService = new AnalysisService(config.analysis, llmService);
   }
 
   async processReview(owner: string, repo: string, prNumber: number): Promise<void> {
@@ -37,17 +51,20 @@ export class WorkflowService {
         changedFiles
       );
       
-      core.info('Performing code review with Gemini...');
+      core.info('Performing code analysis...');
+      const analysisResult = await this.analysisService.analyzeCodebase(indexedCodebase);
+      
+      core.info('Performing code review with LLM...');
       const reviewResult = await this.llmService.performCodeReview({
         indexedCodebase,
         pullRequest: prWithContents
       });
       
       core.info('Posting review results...');
-      await this.postReviewComment(pullRequestInfo, reviewResult);
+      await this.postReviewComment(pullRequestInfo, reviewResult, analysisResult);
       
-      if (this.config.autoApprove && reviewResult.approvalRecommended) {
-        core.info('Auto-approval is enabled and recommended by LLM. Processing...');
+      if (this.config.review.autoApprove && reviewResult.approvalRecommended && this.shouldAutoApprove(analysisResult)) {
+        core.info('Auto-approval is enabled and recommended. Processing...');
         await this.approveAndMergePR(pullRequestInfo);
       }
       
@@ -58,9 +75,23 @@ export class WorkflowService {
     }
   }
 
+  private shouldAutoApprove(analysisResult: ReviewResult): boolean {
+    return (
+      analysisResult.metrics.complexity <= 7 &&
+      analysisResult.metrics.maintainability >= 6 &&
+      analysisResult.metrics.testCoverage >= 80 &&
+      analysisResult.metrics.documentationCoverage >= 80 &&
+      analysisResult.metrics.securityScore >= 8 &&
+      analysisResult.metrics.performanceScore >= 8 &&
+      analysisResult.securityIssues.length === 0 &&
+      analysisResult.performanceIssues.length === 0
+    );
+  }
+
   private async postReviewComment(
     pullRequestInfo: PullRequestInfo, 
-    reviewResult: CodeReviewResult
+    reviewResult: CodeReviewResult,
+    analysisResult: ReviewResult
   ): Promise<void> {
     const { owner, repo, prNumber } = pullRequestInfo;
     
@@ -70,8 +101,56 @@ export class WorkflowService {
     commentBody += `**Overall Quality Score**: ${reviewResult.overallQuality}/100\n`;
     commentBody += `**Recommendation**: ${reviewResult.approvalRecommended ? '✅ Approve' : '❌ Needs Improvement'}\n\n`;
     
+    commentBody += `## Code Analysis Metrics\n\n`;
+    commentBody += `- **Complexity**: ${analysisResult.metrics.complexity}/10\n`;
+    commentBody += `- **Maintainability**: ${analysisResult.metrics.maintainability}/10\n`;
+    commentBody += `- **Test Coverage**: ${analysisResult.metrics.testCoverage}%\n`;
+    commentBody += `- **Documentation Coverage**: ${analysisResult.metrics.documentationCoverage}%\n`;
+    commentBody += `- **Security Score**: ${analysisResult.metrics.securityScore}/10\n`;
+    commentBody += `- **Performance Score**: ${analysisResult.metrics.performanceScore}/10\n\n`;
+    
+    if (analysisResult.suggestions.length > 0) {
+      commentBody += `## Analysis Suggestions\n\n`;
+      for (const suggestion of analysisResult.suggestions) {
+        commentBody += `- ${suggestion}\n`;
+      }
+      commentBody += '\n';
+    }
+    
+    if (analysisResult.securityIssues.length > 0) {
+      commentBody += `## Security Issues\n\n`;
+      for (const issue of analysisResult.securityIssues) {
+        commentBody += `- 🔴 ${issue}\n`;
+      }
+      commentBody += '\n';
+    }
+    
+    if (analysisResult.performanceIssues.length > 0) {
+      commentBody += `## Performance Issues\n\n`;
+      for (const issue of analysisResult.performanceIssues) {
+        commentBody += `- 🚀 ${issue}\n`;
+      }
+      commentBody += '\n';
+    }
+    
+    if (analysisResult.documentationIssues.length > 0) {
+      commentBody += `## Documentation Issues\n\n`;
+      for (const issue of analysisResult.documentationIssues) {
+        commentBody += `- 📝 ${issue}\n`;
+      }
+      commentBody += '\n';
+    }
+    
+    if (analysisResult.testCoverageIssues.length > 0) {
+      commentBody += `## Test Coverage Issues\n\n`;
+      for (const issue of analysisResult.testCoverageIssues) {
+        commentBody += `- ✅ ${issue}\n`;
+      }
+      commentBody += '\n';
+    }
+    
     if (reviewResult.comments.length > 0) {
-      commentBody += `## Detailed Feedback\n\n`;
+      commentBody += `## Detailed Code Review\n\n`;
       
       for (const comment of reviewResult.comments) {
         const locationInfo = comment.startLine 
@@ -91,52 +170,17 @@ export class WorkflowService {
       }
     }
     
-    commentBody += `---\n*This review was automatically generated by the TypeScript Deep Code Review GitHub Action powered by Google's Gemini.*`;
+    commentBody += `---\n*This review was automatically generated by the TypeScript Deep Code Review GitHub Action.*`;
     
     await this.githubService.createComment(owner, repo, prNumber, commentBody);
   }
 
   private async approveAndMergePR(pullRequestInfo: PullRequestInfo): Promise<void> {
     const { owner, repo, prNumber } = pullRequestInfo;
+    await this.githubService.approvePullRequest(owner, repo, prNumber);
     
-    const approvalMessage = 'Automatically approving based on code review results.';
-    
-    try {
-      await this.githubService.createReview(
-        owner, 
-        repo, 
-        prNumber, 
-        'HEAD', 
-        approvalMessage, 
-        'APPROVE'
-      );
-      
-      core.info('PR approved successfully');
-      
-      if (this.config.autoMerge) {
-        const merged = await this.githubService.mergePullRequest(owner, repo, prNumber);
-        
-        if (merged) {
-          core.info('PR merged successfully');
-        } else {
-          core.warning('PR was approved but could not be automatically merged');
-          await this.githubService.createComment(
-            owner, 
-            repo, 
-            prNumber, 
-            '⚠️ PR was approved but could not be automatically merged. Please resolve any conflicts and merge manually.'
-          );
-        }
-      }
-    } catch (error) {
-      core.error(`Error during approval/merge: ${error}`);
-      
-      await this.githubService.createComment(
-        owner, 
-        repo, 
-        prNumber, 
-        '⚠️ An error occurred while trying to approve/merge the PR automatically.'
-      );
+    if (this.config.review.autoMerge) {
+      await this.githubService.mergePullRequest(owner, repo, prNumber);
     }
   }
 } 

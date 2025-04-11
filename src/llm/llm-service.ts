@@ -1,5 +1,128 @@
 import * as core from '@actions/core';
-import { CodeReviewResult, IndexedCodebase, PullRequestInfo, CodeReviewRequest } from '../types/index.js';
+import { CodeReviewResult, IndexedCodebase, PullRequestInfo } from '../types/index.js';
+import { LlmConfig } from '../types/config.js'
+
+export interface LlmResponse {
+  content: string
+  usage: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+}
+
+export interface LlmService {
+  generateContent(prompt: string): Promise<LlmResponse>
+}
+
+export class GeminiService implements LlmService {
+  constructor(private config: LlmConfig) {}
+
+  async generateContent(prompt: string): Promise<LlmResponse> {
+    const endpoint = this.config.endpoint || `https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:generateContent`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
+    })
+
+    const data = await response.json()
+    return {
+      content: data.candidates[0].content.parts[0].text,
+      usage: {
+        promptTokens: data.usageMetadata.promptTokenCount,
+        completionTokens: data.usageMetadata.candidatesTokenCount,
+        totalTokens: data.usageMetadata.totalTokenCount
+      }
+    }
+  }
+}
+
+export class OpenAIService implements LlmService {
+  constructor(private config: LlmConfig) {}
+
+  async generateContent(prompt: string): Promise<LlmResponse> {
+    const response = await fetch(this.config.endpoint || 'https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.config.model,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      })
+    })
+
+    const data = await response.json()
+    return {
+      content: data.choices[0].message.content,
+      usage: {
+        promptTokens: data.usage.prompt_tokens,
+        completionTokens: data.usage.completion_tokens,
+        totalTokens: data.usage.total_tokens
+      }
+    }
+  }
+}
+
+export class AnthropicService implements LlmService {
+  constructor(private config: LlmConfig) {}
+
+  async generateContent(prompt: string): Promise<LlmResponse> {
+    const response = await fetch(this.config.endpoint || 'https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: this.config.model,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }],
+        max_tokens: 4096
+      })
+    })
+
+    const data = await response.json()
+    return {
+      content: data.content[0].text,
+      usage: {
+        promptTokens: data.usage.input_tokens,
+        completionTokens: data.usage.output_tokens,
+        totalTokens: data.usage.input_tokens + data.usage.output_tokens
+      }
+    }
+  }
+}
+
+export function createLlmService(config: LlmConfig): LlmService {
+  switch (config.provider) {
+    case 'gemini':
+      return new GeminiService(config)
+    case 'openai':
+      return new OpenAIService(config)
+    case 'anthropic':
+      return new AnthropicService(config)
+    default:
+      throw new Error(`Unsupported LLM provider: ${config.provider}`)
+  }
+}
 
 export class LLMService {
   private apiKey: string;

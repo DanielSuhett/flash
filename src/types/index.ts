@@ -1,10 +1,13 @@
+import { LlmConfig, FileFilterConfig, AnalysisConfig, ReviewConfig, IndexConfig } from './config.js'
+
 export interface ActionConfig {
   githubToken: string;
-  llmApiKey: string;
-  llmEndpoint: string;
-  autoApprove: boolean;
-  autoMerge: boolean;
-  indexCacheEnabled: boolean;
+  llm: LlmConfig;
+  fileFilter: FileFilterConfig;
+  analysis: AnalysisConfig;
+  review: ReviewConfig;
+  index: IndexConfig;
+  prNumber?: number;
 }
 
 export interface PullRequestInfo {
@@ -60,10 +63,17 @@ export interface CodeReviewRequest {
 }
 
 export interface CodeReviewResult {
+  summary: string;
   overallQuality: number;
   approvalRecommended: boolean;
-  comments: CodeReviewComment[];
-  summary: string;
+  comments: {
+    file: string;
+    startLine?: number;
+    endLine?: number;
+    severity: 'error' | 'warning' | 'info' | 'suggestion';
+    category: string;
+    message: string;
+  }[];
 }
 
 export interface CodeReviewComment {

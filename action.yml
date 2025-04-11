@@ -1,21 +1,28 @@
 name: 'TypeScript Deep Code Review'
-description: 'Performs deep code review on TypeScript pull requests using Gemini AI'
+description: 'Performs deep code review on TypeScript pull requests using AI'
 author: 'ProjectR'
 inputs:
   github-token:
     description: 'GitHub token for API access'
     required: true
+  llm-provider:
+    description: 'LLM provider to use (gemini, openai, anthropic)'
+    required: false
+    default: 'gemini'
   llm-api-key:
-    description: 'API key for Google Gemini'
+    description: 'API key for the selected LLM provider'
     required: true
   llm-endpoint:
-    description: 'Endpoint URL for the Gemini API'
+    description: 'Custom endpoint URL for the LLM API'
     required: false
-    default: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+  llm-model:
+    description: 'Model to use for the selected provider'
+    required: false
+    default: 'gemini-pro'
   auto-approve:
-    description: 'Whether to automatically approve PRs based on Gemini analysis'
+    description: 'Whether to automatically approve PRs based on analysis'
     required: false
-    default: 'false'
+    default: 'true'
   auto-merge:
     description: 'Whether to automatically merge approved PRs'
     required: false
@@ -27,6 +34,26 @@ inputs:
   pr-number: 
     description: 'Pull request number (for manual triggering)'
     required: false
+  enable-metrics:
+    description: 'Whether to generate code quality metrics'
+    required: false
+    default: 'true'
+  enable-security:
+    description: 'Whether to perform security vulnerability scanning'
+    required: false
+    default: 'true'
+  enable-performance:
+    description: 'Whether to analyze code performance'
+    required: false
+    default: 'true'
+  enable-documentation:
+    description: 'Whether to check documentation completeness'
+    required: false
+    default: 'true'
+  enable-test-coverage:
+    description: 'Whether to analyze test coverage'
+    required: false
+    default: 'true'
 runs:
   using: 'node20'
   main: 'dist/index.js'

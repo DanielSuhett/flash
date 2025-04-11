@@ -1,22 +1,23 @@
 import { getOctokit } from '@actions/github';
 import type { RestEndpointMethodTypes } from '@octokit/rest';
 import { PullRequestInfo, FileChange } from '../types/index.js';
+import { Octokit } from '@octokit/rest';
 
 export class GitHubService {
-  private octokit;
+  private octokit: Octokit;
   
   constructor(token: string) {
-    this.octokit = getOctokit(token);
+    this.octokit = new Octokit({ auth: token });
   }
   
   async getPullRequestInfo(owner: string, repo: string, prNumber: number): Promise<PullRequestInfo> {
-    const { data: pr } = await this.octokit.rest.pulls.get({
+    const { data: pr } = await this.octokit.pulls.get({
       owner,
       repo,
       pull_number: prNumber,
     });
 
-    const { data: files } = await this.octokit.rest.pulls.listFiles({
+    const { data: files } = await this.octokit.pulls.listFiles({
       owner,
       repo,
       pull_number: prNumber,
@@ -46,7 +47,7 @@ export class GitHubService {
 
   async getFileContent(owner: string, repo: string, path: string, ref: string): Promise<string | null> {
     try {
-      const response = await this.octokit.rest.repos.getContent({
+      const response = await this.octokit.repos.getContent({
         owner,
         repo,
         path,
@@ -68,7 +69,7 @@ export class GitHubService {
 
   async getRepoContent(owner: string, repo: string, path: string, ref: string): Promise<RepoItem[]> {
     try {
-      const response = await this.octokit.rest.repos.getContent({
+      const response = await this.octokit.repos.getContent({
         owner,
         repo,
         path,
@@ -122,7 +123,7 @@ export class GitHubService {
   }
 
   async createComment(owner: string, repo: string, prNumber: number, body: string): Promise<void> {
-    await this.octokit.rest.issues.createComment({
+    await this.octokit.issues.createComment({
       owner,
       repo,
       issue_number: prNumber,
@@ -131,7 +132,7 @@ export class GitHubService {
   }
 
   async createReview(owner: string, repo: string, prNumber: number, commit_id: string, body: string, event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'): Promise<void> {
-    await this.octokit.rest.pulls.createReview({
+    await this.octokit.pulls.createReview({
       owner,
       repo,
       pull_number: prNumber,
@@ -141,15 +142,32 @@ export class GitHubService {
     });
   }
 
+  async approvePullRequest(owner: string, repo: string, prNumber: number): Promise<void> {
+    await this.octokit.pulls.createReview({
+      owner,
+      repo,
+      pull_number: prNumber,
+      event: 'APPROVE',
+      body: 'Automatically approved based on code review results.'
+    });
+  }
+
   async mergePullRequest(owner: string, repo: string, prNumber: number): Promise<boolean> {
     try {
-      await this.octokit.rest.pulls.merge({
+      await this.octokit.pulls.merge({
         owner,
         repo,
         pull_number: prNumber,
+        merge_method: 'merge'
       });
       return true;
     } catch (error) {
+      await this.createComment(
+        owner,
+        repo,
+        prNumber,
+        '⚠️ PR was approved but could not be automatically merged. Please resolve any conflicts and merge manually.'
+      );
       return false;
     }
   }
