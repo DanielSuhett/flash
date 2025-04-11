@@ -7,7 +7,10 @@ export class GitHubService {
   private octokit: Octokit;
 
   constructor(token: string) {
-    this.octokit = new Octokit({ auth: token });
+    this.octokit = new Octokit({
+      auth: token,
+      userAgent: 'rreviewer',
+    });
   }
 
   async getPullRequestInfo(
@@ -74,6 +77,10 @@ export class GitHubService {
 
       return null;
     } catch (error) {
+      core.warning(
+        `Failed to fetch content for ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+
       return null;
     }
   }

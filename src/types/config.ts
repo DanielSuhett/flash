@@ -12,12 +12,12 @@ export interface AnalysisConfig {
   enableSecurity: boolean;
   enablePerformance: boolean;
   enableDocumentation: boolean;
-  enableTestCoverage: boolean;
 }
 
 export interface ReviewConfig {
   autoApprove: boolean;
   autoMerge: boolean;
+  qualityThreshold: number;
 }
 
 export interface IndexConfig {
@@ -35,7 +35,6 @@ export interface ActionConfig {
 export interface CodeMetrics {
   complexity: number;
   maintainability: number;
-  testCoverage: number;
   documentationCoverage: number;
   securityScore: number;
   performanceScore: number;
@@ -48,5 +47,4 @@ export interface ReviewResult {
   securityIssues: string[];
   performanceIssues: string[];
   documentationIssues: string[];
-  testCoverageIssues: string[];
 }

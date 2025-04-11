@@ -2,6 +2,22 @@ import { AnalysisConfig, CodeMetrics, ReviewResult } from '../types/config.js';
 import { IndexedCodebase } from '../types/index.js';
 import { LlmService } from '../llm/llm-service.js';
 
+interface AnalysisResponse {
+  metrics: {
+    complexity: number;
+    maintainability: number;
+    documentationCoverage: number;
+    securityScore: number;
+    performanceScore: number;
+  };
+  issues: {
+    security: string[];
+    performance: string[];
+    documentation: string[];
+  };
+  summary: string;
+}
+
 export class AnalysisService {
   constructor(
     private config: AnalysisConfig,
@@ -9,167 +25,118 @@ export class AnalysisService {
   ) {}
 
   async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
-    const metrics = await this.calculateMetrics(codebase);
-
-    console.log('this.config.enablePerformance', this.config.enablePerformance);
-    const securityIssues = this.config.enableSecurity ? await this.checkSecurity(codebase) : [];
-    const performanceIssues = this.config.enablePerformance
-      ? await this.checkPerformance(codebase)
-      : [];
-    const documentationIssues = this.config.enableDocumentation
-      ? await this.checkDocumentation(codebase)
-      : [];
-    const testCoverageIssues = this.config.enableTestCoverage
-      ? await this.checkTestCoverage(codebase)
-      : [];
-
-    const summary = await this.generateSummary(metrics, {
-      securityIssues,
-      performanceIssues,
-      documentationIssues,
-      testCoverageIssues,
-    });
+    const analysis = await this.performAnalysis(codebase);
 
     return {
-      summary,
-      suggestions: this.generateSuggestions(metrics, {
-        securityIssues,
-        performanceIssues,
-        documentationIssues,
-        testCoverageIssues,
-      }),
-      metrics,
-      securityIssues,
-      performanceIssues,
-      documentationIssues,
-      testCoverageIssues,
+      summary: analysis.summary,
+      suggestions: this.generateSuggestions(analysis.metrics, analysis.issues),
+      metrics: analysis.metrics,
+      securityIssues: this.config.enableSecurity ? analysis.issues.security : [],
+      performanceIssues: this.config.enablePerformance ? analysis.issues.performance : [],
+      documentationIssues: this.config.enableDocumentation ? analysis.issues.documentation : [],
     };
   }
 
-  private async calculateMetrics(codebase: IndexedCodebase): Promise<CodeMetrics> {
-    const prompt = `Analyze the following codebase and provide metrics for:
-1. Code complexity (1-10)
-2. Maintainability score (1-10)
-3. Test coverage percentage
-4. Documentation coverage percentage
-5. Security score (1-10)
-6. Performance score (1-10)
+  private async performAnalysis(codebase: IndexedCodebase): Promise<AnalysisResponse> {
+    const codebaseSummary = this.buildCodebaseSummary(codebase);
+    const prompt = `Analyze the following TypeScript codebase and provide a comprehensive review with metrics and issues.
 
-Codebase:
-${JSON.stringify(codebase, null, 2)}`;
+Codebase Structure:
+${codebaseSummary}
 
-    const response = await this.llmService.generateContent(prompt);
-    const metrics = JSON.parse(response.content);
+Please provide a detailed analysis with the following structure:
+1. Code Metrics (all scores from 0-10 except documentation coverage which is 0-100):
+   - Complexity score
+   - Maintainability score
+   - Documentation coverage percentage
+   - Security score
+   - Performance score
 
-    return {
-      complexity: metrics.complexity,
-      maintainability: metrics.maintainability,
-      testCoverage: metrics.testCoverage,
-      documentationCoverage: metrics.documentationCoverage,
-      securityScore: metrics.securityScore,
-      performanceScore: metrics.performanceScore,
-    };
-  }
+2. Issues found:
+   - Security vulnerabilities
+   - Performance bottlenecks
+   - Documentation gaps
 
-  private async checkSecurity(codebase: IndexedCodebase): Promise<string[]> {
-    const prompt = `Analyze the following codebase for security vulnerabilities and provide a list of issues found:
+3. A summary of the overall code quality and recommendations
 
-Codebase:
-${JSON.stringify(codebase, null, 2)}`;
-
-    const response = await this.llmService.generateContent(prompt);
-
-    return JSON.parse(response.content);
-  }
-
-  private async checkPerformance(codebase: IndexedCodebase): Promise<string[]> {
-    const prompt = `Analyze the following codebase for performance issues and provide a list of potential bottlenecks:
-
-Codebase:
-${JSON.stringify(codebase, null, 2)}`;
+IMPORTANT: Return ONLY a valid JSON object with this exact structure:
+{
+  "metrics": {
+    "complexity": number,
+    "maintainability": number,
+    "documentationCoverage": number,
+    "securityScore": number,
+    "performanceScore": number
+  },
+  "issues": {
+    "security": string[],
+    "performance": string[],
+    "documentation": string[]
+  },
+  "summary": string
+}`;
 
     const response = await this.llmService.generateContent(prompt);
 
     return JSON.parse(response.content);
   }
 
-  private async checkDocumentation(codebase: IndexedCodebase): Promise<string[]> {
-    const prompt = `Analyze the following codebase for documentation completeness and provide a list of missing or inadequate documentation:
+  private buildCodebaseSummary(codebase: IndexedCodebase): string {
+    const summary: string[] = [];
 
-Codebase:
-${JSON.stringify(codebase, null, 2)}`;
+    for (const file of codebase.files) {
+      const declarations = file.declarations
+        .map((decl) => {
+          const deps = decl.dependencies?.length ? `[deps:${decl.dependencies.join(',')}]` : '';
 
-    const response = await this.llmService.generateContent(prompt);
+          return `${decl.type}:${decl.name}${decl.exported ? ':exported' : ''}${deps}`;
+        })
+        .join(';');
 
-    return JSON.parse(response.content);
-  }
-
-  private async checkTestCoverage(codebase: IndexedCodebase): Promise<string[]> {
-    const prompt = `Analyze the following codebase for test coverage gaps and provide a list of areas that need additional testing:
-
-Codebase:
-${JSON.stringify(codebase, null, 2)}`;
-
-    const response = await this.llmService.generateContent(prompt);
-
-    return JSON.parse(response.content);
-  }
-
-  private async generateSummary(
-    metrics: CodeMetrics,
-    issues: {
-      securityIssues: string[];
-      performanceIssues: string[];
-      documentationIssues: string[];
-      testCoverageIssues: string[];
+      summary.push(`${file.path}|${declarations}`);
     }
-  ): Promise<string> {
-    const prompt = `Generate a summary of the code review based on the following metrics and issues:
 
-Metrics:
-${JSON.stringify(metrics, null, 2)}
+    const dependencies = Object.entries(codebase.dependencies)
+      .map(([key, deps]) => `${key}:${deps.join(',')}`)
+      .join(';');
 
-Issues:
-${JSON.stringify(issues, null, 2)}`;
+    const imports = Object.entries(codebase.imports)
+      .map(([key, imps]) => `${key}:${imps.join(',')}`)
+      .join(';');
 
-    const response = await this.llmService.generateContent(prompt);
-
-    return response.content;
+    return ['FILES:', summary.join('\n'), 'DEPENDENCIES:', dependencies, 'IMPORTS:', imports].join(
+      '\n'
+    );
   }
 
   private generateSuggestions(
     metrics: CodeMetrics,
     _issues: {
-      securityIssues: string[];
-      performanceIssues: string[];
-      documentationIssues: string[];
-      testCoverageIssues: string[];
+      security: string[];
+      performance: string[];
+      documentation: string[];
     }
   ): string[] {
     const suggestions: string[] = [];
 
-    if (metrics.complexity > 7) {
-      suggestions.push('Consider refactoring to reduce code complexity');
+    if (metrics.complexity > 10) {
+      suggestions.push('Consider refactoring complex functions to improve readability');
     }
 
-    if (metrics.maintainability < 6) {
-      suggestions.push('Improve code maintainability by following best practices');
-    }
-
-    if (metrics.testCoverage < 80) {
-      suggestions.push('Increase test coverage to improve code reliability');
+    if (metrics.maintainability < 80) {
+      suggestions.push('Improve code organization and documentation to enhance maintainability');
     }
 
     if (metrics.documentationCoverage < 80) {
-      suggestions.push('Add more documentation to improve code understanding');
+      suggestions.push('Increase documentation coverage to improve code understanding');
     }
 
     if (metrics.securityScore < 8) {
-      suggestions.push('Address security vulnerabilities to improve security score');
+      suggestions.push('Address security vulnerabilities to improve code safety');
     }
 
     if (metrics.performanceScore < 8) {
-      suggestions.push('Optimize code to improve performance');
+      suggestions.push('Optimize performance bottlenecks to improve code efficiency');
     }
 
     return suggestions;

@@ -1,8 +1,13 @@
 import * as core from '@actions/core';
-import { ActionConfig, CodeReviewResult, PullRequestInfo } from '../types/index.js';
+import {
+  ActionConfig,
+  CodeReviewResult,
+  PullRequestInfo,
+  IndexedCodebase,
+} from '../types/index.js';
 import { GitHubService } from '../github/github-service.js';
 import { CodeIndexer } from '../indexing/indexer.js';
-import { LLMService } from '../llm/llm-service.js';
+import { LlmService } from '../llm/llm-service.js';
 import { AnalysisService } from './analysis-service.js';
 import { createLlmService } from '../llm/llm-service.js';
 import { LlmConfig, ReviewResult } from '../types/config.js';
@@ -11,7 +16,7 @@ export class WorkflowService {
   private config: ActionConfig;
   private githubService: GitHubService;
   private codeIndexer: CodeIndexer;
-  private llmService: LLMService;
+  private llmService: LlmService;
   private analysisService: AnalysisService;
 
   constructor(config: ActionConfig) {
@@ -26,10 +31,10 @@ export class WorkflowService {
       model: config.llm.model,
     };
 
-    const llmService = createLlmService(llmConfig);
+    core.info(JSON.stringify(llmConfig));
 
-    this.llmService = new LLMService(llmConfig);
-    this.analysisService = new AnalysisService(config.analysis, llmService);
+    this.llmService = createLlmService(llmConfig);
+    this.analysisService = new AnalysisService(config.analysis, this.llmService);
   }
 
   async processReview(owner: string, repo: string, prNumber: number): Promise<void> {
@@ -61,7 +66,7 @@ export class WorkflowService {
       }
 
       core.info('Performing code analysis...');
-      const analysisResult = await this.analysisService.analyzeCodebase(indexedCodebase);
+      const analysisResult = await this.analyzeCodebase(indexedCodebase);
 
       core.info('Performing code review with LLM...');
       const reviewResult = await this.llmService.performCodeReview({
@@ -92,7 +97,6 @@ export class WorkflowService {
     return (
       analysisResult.metrics.complexity <= 7 &&
       analysisResult.metrics.maintainability >= 6 &&
-      analysisResult.metrics.testCoverage >= 80 &&
       analysisResult.metrics.documentationCoverage >= 80 &&
       analysisResult.metrics.securityScore >= 8 &&
       analysisResult.metrics.performanceScore >= 8 &&
@@ -109,6 +113,7 @@ export class WorkflowService {
     const { owner, repo, prNumber } = pullRequestInfo;
     const comment = this.buildReviewComment(reviewResult, analysisResult);
 
+    core.info(`Creating comment: ${comment}`);
     await this.githubService.createComment(owner, repo, prNumber, comment);
   }
 
@@ -117,27 +122,61 @@ export class WorkflowService {
     const suggestions = this.buildSuggestionsSection(reviewResult);
     const metrics = this.buildMetricsSection(analysisResult);
     const issues = this.buildIssuesSection(analysisResult);
+    const approval = this.buildApprovalSection(reviewResult);
 
-    return `${summary}\n\n${suggestions}\n\n${metrics}\n\n${issues}`;
+    return `${summary}\n\n${approval}\n\n${suggestions}\n\n${metrics}\n\n${issues}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResult): string {
-    return `## Code Review Summary\n\n${reviewResult.summary}\n\nOverall Quality Score: ${
-      reviewResult.overallQuality
-    }/100`;
+    const qualityEmoji =
+      reviewResult.overallQuality >= 80 ? '🟢' : reviewResult.overallQuality >= 50 ? '🟡' : '🔴';
+
+    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/100**`;
+  }
+
+  private buildApprovalSection(reviewResult: CodeReviewResult): string {
+    const approvalThreshold = this.config.review.qualityThreshold || 80;
+    const isApproved = reviewResult.overallQuality >= approvalThreshold;
+    const emoji = isApproved ? '✅' : '❌';
+    const status = isApproved ? 'Approved' : 'Changes Requested';
+
+    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/100`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResult): string {
-    return `## Suggested Improvements\n\n${reviewResult.comments
+    const suggestions = reviewResult.comments
       .filter((comment) => comment.severity === 'suggestion')
-      .map((comment) => `- ${comment.message}`)
-      .join('\n')}`;
+      .map((comment) => `- ${comment.message}`);
+
+    if (suggestions.length === 0) {
+      return '';
+    }
+
+    return `## Suggested Improvements\n\n${suggestions.join('\n')}`;
   }
 
   private buildMetricsSection(analysisResult: ReviewResult): string {
-    return `## Code Metrics\n\n- Complexity: ${analysisResult.metrics.complexity}\n- Maintainability: ${
-      analysisResult.metrics.maintainability
-    }\n- Test Coverage: ${analysisResult.metrics.testCoverage}%`;
+    const metrics = analysisResult.metrics;
+    const emojis = {
+      complexity: this.getMetricEmoji(10 - metrics.complexity / 2),
+      maintainability: this.getMetricEmoji(metrics.maintainability / 10),
+      documentationCoverage: this.getMetricEmoji(metrics.documentationCoverage / 10),
+      securityScore: this.getMetricEmoji(metrics.securityScore),
+      performanceScore: this.getMetricEmoji(metrics.performanceScore),
+    };
+
+    return (
+      `## Code Quality Metrics\n\n` +
+      `${emojis.complexity} **Complexity**: ${metrics.complexity}/10\n` +
+      `${emojis.maintainability} **Maintainability**: ${metrics.maintainability}/100\n` +
+      `${emojis.documentationCoverage} **Documentation**: ${metrics.documentationCoverage}%\n` +
+      `${emojis.securityScore} **Security**: ${metrics.securityScore}/10\n` +
+      `${emojis.performanceScore} **Performance**: ${metrics.performanceScore}/10`
+    );
+  }
+
+  private getMetricEmoji(score: number): string {
+    return score >= 8 ? '🟢' : score >= 5 ? '🟡' : '🔴';
   }
 
   private buildIssuesSection(analysisResult: ReviewResult): string {
@@ -145,37 +184,29 @@ export class WorkflowService {
 
     if (analysisResult.securityIssues.length > 0) {
       sections.push(
-        `### Security Issues\n\n${analysisResult.securityIssues
-          .map((issue) => `- ${issue}`)
+        `### 🔒 Security Issues\n\n${analysisResult.securityIssues
+          .map((issue: string) => `- ⚠️ ${issue}`)
           .join('\n')}`
       );
     }
 
     if (analysisResult.performanceIssues.length > 0) {
       sections.push(
-        `### Performance Issues\n\n${analysisResult.performanceIssues
-          .map((issue) => `- ${issue}`)
+        `### ⚡ Performance Issues\n\n${analysisResult.performanceIssues
+          .map((issue: string) => `- 🐢 ${issue}`)
           .join('\n')}`
       );
     }
 
     if (analysisResult.documentationIssues.length > 0) {
       sections.push(
-        `### Documentation Issues\n\n${analysisResult.documentationIssues
-          .map((issue) => `- ${issue}`)
+        `### 📚 Documentation Issues\n\n${analysisResult.documentationIssues
+          .map((issue: string) => `- 📝 ${issue}`)
           .join('\n')}`
       );
     }
 
-    if (analysisResult.testCoverageIssues.length > 0) {
-      sections.push(
-        `### Test Coverage Issues\n\n${analysisResult.testCoverageIssues
-          .map((issue) => `- ${issue}`)
-          .join('\n')}`
-      );
-    }
-
-    return sections.join('\n\n');
+    return sections.length > 0 ? `## Issues Found\n\n${sections.join('\n\n')}` : '';
   }
 
   private async approveAndMergePR(pullRequestInfo: PullRequestInfo): Promise<void> {
@@ -186,5 +217,15 @@ export class WorkflowService {
     if (this.config.review.autoMerge) {
       await this.githubService.mergePullRequest(owner, repo, prNumber);
     }
+  }
+
+  private async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
+    const analysisResult = await this.analysisService.analyzeCodebase(codebase);
+
+    if (analysisResult.metrics.complexity <= 10 && analysisResult.metrics.maintainability >= 80) {
+      return analysisResult;
+    }
+
+    return analysisResult;
   }
 }

@@ -24,7 +24,7 @@ export class CodeIndexer {
     for (let i = 0; i < tsFiles.length; i += 10) {
       const batch = tsFiles.slice(i, i + 10);
       const contents = await Promise.all(
-        batch.map((file) => this.githubService.getFileContent(owner, repo, branch, file))
+        batch.map((file) => this.githubService.getFileContent(owner, repo, file, branch))
       );
 
       for (let j = 0; j < batch.length; j++) {
@@ -53,6 +53,12 @@ export class CodeIndexer {
       }
     }
 
+    if (files.length === 0) {
+      core.warning(
+        'No TypeScript files were successfully processed. This might affect the quality of the review.'
+      );
+    }
+
     return { files, dependencies, imports };
   }
 
@@ -79,7 +85,6 @@ export class CodeIndexer {
               const tsFiles = this.filterTypeScriptFiles([item.path]);
 
               if (tsFiles.length > 0) {
-                core.debug(`Found TypeScript file: ${item.path}`);
                 files.push(...tsFiles);
               }
             }

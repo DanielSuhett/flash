@@ -35,10 +35,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Test coverage
-coverage/
-.nyc_output/
-
 # Cache directories
 .npm/
 .eslintcache

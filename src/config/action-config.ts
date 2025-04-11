@@ -15,11 +15,11 @@ export function loadActionConfig(): ActionConfig {
       enableSecurity: core.getBooleanInput('enable-security', { required: false }),
       enablePerformance: core.getBooleanInput('enable-performance', { required: false }),
       enableDocumentation: core.getBooleanInput('enable-documentation', { required: false }),
-      enableTestCoverage: core.getBooleanInput('enable-test-coverage', { required: false }),
     },
     review: {
       autoApprove: core.getBooleanInput('auto-approve', { required: false }),
       autoMerge: core.getBooleanInput('auto-merge', { required: false }),
+      qualityThreshold: Number(core.getInput('quality-threshold', { required: false })) || 80,
     },
     index: {
       cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
