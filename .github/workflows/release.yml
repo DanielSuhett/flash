@@ -31,13 +31,27 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Verify build output
+        run: |
+          ls -la dist/
+          test -f dist/index.js
+          test -f dist/index.js.map
+
+      - name: Create release package
+        run: |
+          mkdir -p release
+          cp dist/index.js release/
+          cp dist/index.js.map release/
+          cp action.yml release/
+          ls -la release/
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/index.js
-            dist/index.js.map
-            action.yml
+            release/index.js
+            release/index.js.map
+            release/action.yml
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

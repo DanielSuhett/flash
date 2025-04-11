@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       pr-number:
@@ -22,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: TypeScript Deep Code Review
-        uses: DanielSuhett/projectr@v0.0.1.4
+        uses: DanielSuhett/projectr@v0.0.1.5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           llm-api-key: ${{ secrets.LLM_API_KEY }}
