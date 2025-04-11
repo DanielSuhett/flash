@@ -150,7 +150,7 @@ export class GitHubService {
     });
   }
 
-  // TODO: reduce the number of parameters
+  // TODO: reduce the number of parameters.
   async createReview(
     owner: string,
     repo: string,
