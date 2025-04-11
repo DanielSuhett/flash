@@ -1,11 +1,10 @@
 name: TypeScript Deep Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - '**.ts'
-      - '**.tsx'
+  push:
+    branches:
+      - main
+      - develop
 
 jobs:
   code-review:
@@ -17,10 +16,10 @@ jobs:
           fetch-depth: 0
 
       - name: TypeScript Deep Code Review
-        uses: projectr/ts-deep-code-review@v1
+        uses: DanielSuhett/projectr@0.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          llm-api-key: ${{ secrets.GEMINI_API_KEY }}
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
           auto-approve: 'false'
           auto-merge: 'false'
           index-cache-enabled: 'true' 
