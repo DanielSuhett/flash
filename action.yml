@@ -18,7 +18,7 @@ inputs:
   llm-model:
     description: 'Model to use for the selected provider'
     required: false
-    default: 'gemini-pro'
+    default: 'gemini-2.5-flash'
   auto-approve:
     description: 'Whether to automatically approve PRs based on analysis'
     required: false

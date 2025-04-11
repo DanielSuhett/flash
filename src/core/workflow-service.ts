@@ -28,7 +28,7 @@ export class WorkflowService {
 
     const llmService = createLlmService(llmConfig);
 
-    this.llmService = new LLMService(config.llm.apiKey, config.llm.endpoint);
+    this.llmService = new LLMService(llmConfig);
     this.analysisService = new AnalysisService(config.analysis, llmService);
   }
 

@@ -7,9 +7,7 @@ export function loadActionConfig(): ActionConfig {
     llm: {
       provider: core.getInput('llm-provider', { required: true }) as LlmProvider,
       apiKey: core.getInput('llm-api-key', { required: true }),
-      endpoint:
-        core.getInput('llm-endpoint', { required: false }) ||
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+      endpoint: core.getInput('llm-endpoint', { required: false }),
       model: core.getInput('llm-model', { required: true }),
     },
     analysis: {

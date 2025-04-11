@@ -44,7 +44,7 @@ jobs:
         uses: projectr/ts-deep-code-review@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          llm-api-key: ${{ secrets.GEMINI_API_KEY }}
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
           auto-approve: 'false'
           auto-merge: 'false'
           index-cache-enabled: 'true'
