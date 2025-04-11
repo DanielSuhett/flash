@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: TypeScript Deep Code Review
-        uses: DanielSuhett/projectr@0.0.1
+        uses: DanielSuhett/projectr@v0.0.1.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           llm-api-key: ${{ secrets.LLM_API_KEY }}
