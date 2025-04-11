@@ -64,17 +64,45 @@ export class CodeIndexer {
     imports: Record<string, string[]>
   ): Promise<string[]> {
     const files: string[] = [];
-    const baseDirs = ['src', 'lib', 'packages'];
+    const baseDirs = ['', 'src', 'lib', 'packages', 'test', 'tests', '__tests__'];
 
-    for (const dir of baseDirs) {
+    const processDirectory = async (dir: string): Promise<void> => {
       try {
+        core.debug(`Searching for TypeScript files in directory: ${dir || 'root'}`);
         const dirFiles = await this.githubService.getRepoContent(owner, repo, dir, branch);
 
-        files.push(...this.filterTypeScriptFiles(dirFiles.map((item) => item.path)));
+        if (dirFiles && dirFiles.length > 0) {
+          for (const item of dirFiles) {
+            if (item.type === 'dir') {
+              await processDirectory(item.path);
+            } else if (item.type === 'file') {
+              const tsFiles = this.filterTypeScriptFiles([item.path]);
+
+              if (tsFiles.length > 0) {
+                core.debug(`Found TypeScript file: ${item.path}`);
+                files.push(...tsFiles);
+              }
+            }
+          }
+        }
       } catch (error) {
-        core.debug(`Directory ${dir} not found or error accessing: ${error}`);
+        core.debug(`Directory ${dir || 'root'} not found or error accessing: ${error}`);
       }
+    };
+
+    for (const dir of baseDirs) {
+      await processDirectory(dir);
     }
+
+    if (files.length === 0) {
+      core.warning(
+        'No TypeScript files found in the repository. This might affect the quality of the review.'
+      );
+
+      return [];
+    }
+
+    core.info(`Found ${files.length} TypeScript files in total: ${files.join(', ')}`);
 
     const prioritized = files.filter((file) =>
       prioritizedFiles.some((prioritized) => file.includes(prioritized))
@@ -86,7 +114,13 @@ export class CodeIndexer {
       .filter((file) => !prioritized.includes(file) && !relatedFiles.includes(file))
       .slice(0, 100);
 
-    return [...new Set([...prioritized, ...relatedFiles, ...remaining])];
+    const allFiles = [...new Set([...prioritized, ...relatedFiles, ...remaining])];
+
+    if (allFiles.length === 0) {
+      throw new Error('No valid TypeScript files found after processing');
+    }
+
+    return allFiles;
   }
 
   private filterTypeScriptFiles(files: string[]): string[] {

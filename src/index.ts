@@ -11,7 +11,7 @@ async function run(): Promise<void> {
     let prNumber: number | undefined;
 
     if (context.eventName === 'pull_request') {
-      prNumber = context.payload.pull_request?.number;
+      prNumber = context.payload.pull_request?.number ?? 3;
       if (!prNumber) {
         throw new Error('PR number not found in context');
       }

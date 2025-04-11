@@ -54,6 +54,12 @@ export class WorkflowService {
         changedFiles
       );
 
+      if (indexedCodebase.files.length === 0) {
+        core.warning(
+          'No TypeScript files found in the repository. Review will be limited to changed files only.'
+        );
+      }
+
       core.info('Performing code analysis...');
       const analysisResult = await this.analysisService.analyzeCodebase(indexedCodebase);
 

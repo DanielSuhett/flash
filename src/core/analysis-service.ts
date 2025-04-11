@@ -10,6 +10,8 @@ export class AnalysisService {
 
   async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
     const metrics = await this.calculateMetrics(codebase);
+
+    console.log('this.config.enablePerformance', this.config.enablePerformance);
     const securityIssues = this.config.enableSecurity ? await this.checkSecurity(codebase) : [];
     const performanceIssues = this.config.enablePerformance
       ? await this.checkPerformance(codebase)

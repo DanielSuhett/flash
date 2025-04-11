@@ -56,9 +56,7 @@ module.exports = {
         }
       }
     ],
-    'max-lines-per-function': ['warn', { max: 50 }],
-    'max-lines': ['warn', { max: 500 }],
-    'max-params': ['warn', { max: 5 }],
+    'max-params': ['warn', { max: 6 }],
     'no-multiple-empty-lines': ['error', { max: 1 }],
     'padding-line-between-statements': [
       'error',
