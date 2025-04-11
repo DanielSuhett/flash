@@ -1,10 +1,16 @@
 name: TypeScript Deep Code Review
 
 on:
-  push:
+  pull_request:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'Pull request number to review'
+        required: true
+        type: number
 
 jobs:
   code-review:
@@ -20,6 +26,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           llm-api-key: ${{ secrets.LLM_API_KEY }}
-          auto-approve: 'false'
-          auto-merge: 'false'
-          index-cache-enabled: 'true' 
+          auto-approve: false
+          auto-merge: false
+          index-cache-enabled: true
+          pr-number: ${{ github.event.inputs.pr-number }} 

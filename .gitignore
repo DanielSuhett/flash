@@ -16,6 +16,8 @@ lib/
 !.env.example
 .env.local
 .env.*.local
+.secrets
+.actrc
 
 # IDE and editors
 .idea/
@@ -48,3 +50,5 @@ temp/
 
 # Project specific
 .github/workflows/.cache/
+.secrets/
+.DS_Store

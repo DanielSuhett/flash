@@ -15,16 +15,6 @@ export interface LlmService {
   generateContent(prompt: string): Promise<LlmResponse>;
 }
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
-}
-
 export class GeminiService implements LlmService {
   constructor(private config: LlmConfig) {}
 
@@ -151,15 +141,10 @@ export function createLlmService(config: LlmConfig): LlmService {
 }
 
 export class LLMService {
-  private apiKey: string;
-  private endpoint: string;
+  private config: LlmConfig;
 
-  constructor(
-    apiKey: string,
-    endpoint: string = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
-  ) {
-    this.apiKey = apiKey;
-    this.endpoint = endpoint;
+  constructor(config: LlmConfig) {
+    this.config = config;
   }
 
   async performCodeReview(params: {
@@ -171,12 +156,13 @@ export class LLMService {
     const prompt = this.buildReviewPrompt(indexedCodebase, pullRequest);
 
     try {
-      const response = await this.callGeminiAPI(prompt);
-      const text = response.candidates[0].content.parts[0].text;
+      const llmService = createLlmService(this.config);
+      const response = await llmService.generateContent(prompt);
+      const text = response.content;
 
       return this.parseReviewResponse(text);
     } catch (error) {
-      core.error(`Error calling Gemini API: ${error}`);
+      core.error(`Error calling LLM API: ${error}`);
       throw error;
     }
   }
@@ -256,33 +242,6 @@ Format your response as a JSON object with this structure:
     }
 
     return summary;
-  }
-
-  private async callGeminiAPI(prompt: string): Promise<GeminiResponse> {
-    const response = await fetch(this.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
-    }
-
-    return response.json();
   }
 
   private parseReviewResponse(text: string): CodeReviewResult {
