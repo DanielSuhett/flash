@@ -73,5 +73,9 @@ export interface CodeReviewResponse {
   overallQuality: number;
   approvalRecommended: boolean;
   suggestions: CodeReviewSuggestions;
-  tokenUsage: TokenUsage;
+  usageMetadata: {
+    promptTokenCount: number;
+    candidatesTokenCount: number;
+    totalTokenCount: number;
+  };
 }

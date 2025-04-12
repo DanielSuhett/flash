@@ -90,11 +90,10 @@ without any markdown formatting, code blocks, or additional text:
       }
     ]
   },
-  "tokenUsage": {
-    "model": string,
-    "promptTokens": number,
-    "completionTokens": number,
-    "totalTokens": number
+  "usageMetadata": {
+    "promptTokenCount": number,
+    "candidatesTokenCount": number,
+    "totalTokenCount": number
   }
 }`;
   }
@@ -175,16 +174,26 @@ ${content}`;
         typeof result.approvalRecommended !== 'boolean' ||
         !Array.isArray(result.suggestions.critical) ||
         !Array.isArray(result.suggestions.important) ||
-        !Array.isArray(result.suggestions.minor) ||
-        typeof result.tokenUsage.model !== 'string' ||
-        typeof result.tokenUsage.promptTokens !== 'number' ||
-        typeof result.tokenUsage.completionTokens !== 'number' ||
-        typeof result.tokenUsage.totalTokens !== 'number'
+        !Array.isArray(result.suggestions.minor)
       ) {
         throw new Error('Invalid response structure');
       }
 
-      return result;
+      const { metrics, issues, summary, overallQuality, approvalRecommended, suggestions } = result;
+
+      return {
+        metrics,
+        issues,
+        summary,
+        overallQuality,
+        approvalRecommended,
+        suggestions,
+        usageMetadata: {
+          promptTokenCount: result.tokenUsage?.promptTokens || 0,
+          candidatesTokenCount: result.tokenUsage?.completionTokens || 0,
+          totalTokenCount: result.tokenUsage?.totalTokens || 0,
+        },
+      };
     } catch (error) {
       console.warn(`Failed to parse JSON response: ${error}`);
 
@@ -207,11 +216,10 @@ ${content}`;
           important: [],
           minor: [],
         },
-        tokenUsage: {
-          model: '',
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
+        usageMetadata: {
+          promptTokenCount: 0,
+          candidatesTokenCount: 0,
+          totalTokenCount: 0,
         },
       };
     }
@@ -225,9 +233,9 @@ ${content}`;
     return {
       content: data.candidates[0].content.parts[0].text,
       usage: {
-        promptTokens: data?.usageMetadata?.promptTokenCount,
-        completionTokens: data?.usageMetadata?.candidatesTokenCount,
-        totalTokens: data?.usageMetadata?.totalTokenCount,
+        promptTokens: data.usageMetadata?.promptTokenCount,
+        completionTokens: data.usageMetadata?.candidatesTokenCount,
+        totalTokens: data.usageMetadata?.totalTokenCount,
       },
     };
   }

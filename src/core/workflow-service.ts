@@ -251,7 +251,7 @@ export class WorkflowService {
   }
 
   private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {
-    if (!reviewResult.tokenUsage) {
+    if (!reviewResult.usageMetadata) {
       return '';
     }
 
@@ -259,7 +259,7 @@ export class WorkflowService {
 
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
-| ${reviewResult.tokenUsage.model} | ${reviewResult.tokenUsage.promptTokens} | ${reviewResult.tokenUsage.completionTokens} | ${reviewResult.tokenUsage.totalTokens} |`;
+| gemini-2.0-flash | ${reviewResult.usageMetadata.promptTokenCount} | ${reviewResult.usageMetadata.candidatesTokenCount} | ${reviewResult.usageMetadata.totalTokenCount} |`;
   }
 
   private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {
