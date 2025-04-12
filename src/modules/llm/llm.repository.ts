@@ -19,6 +19,8 @@ export class LlmRepository {
     const response = await this.executeRequest(endpoint, prompt);
     const data = (await response.json()) as GeminiResponse;
 
+    core.info(JSON.stringify(data));
+
     core.info(
       `Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
       ${data?.usageMetadata?.candidatesTokenCount} completion, 
@@ -36,9 +38,15 @@ export class LlmRepository {
         'x-goog-api-key': this.config.apiKey,
       },
       body: JSON.stringify({
-        contents: [{ text: prompt }],
-        generationConfig: {
-          maxTokens: this.config.maxTokens || 2048,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+        generation_config: {
+          max_output_tokens: this.config.maxTokens || 2048,
+          responseMimeType: 'application/json',
         },
       }),
     });

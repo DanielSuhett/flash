@@ -51,7 +51,7 @@ module.exports = {
         selector: 'objectLiteralProperty',
         format: null,
         filter: {
-          regex: '^(Content-Type|Authorization|x-api-key|anthropic-version|max_tokens|pull_number|issue_number|commit_id|merge_method|x-goog-api-key)$',
+          regex: '^(Content-Type|Authorization|x-api-key|anthropic-version|max_tokens|pull_number|issue_number|commit_id|merge_method|x-goog-api-key|generation_config|max_output_tokens)$',
           match: true
         }
       }

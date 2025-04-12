@@ -129,7 +129,7 @@ ${content}`;
   }
 
   static buildGeminiEndpoint(model: string): string {
-    return `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
+    return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   }
 
   static mapGeminiResponse(data: GeminiResponse): LlmResponse {
