@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "ncc build src/index.ts -o dist --source-map",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "types": "tsc --noEmit",
     "format": "prettier --write '**/*.ts'",
     "lint": "eslint src --ext .ts",
