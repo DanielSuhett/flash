@@ -159,6 +159,39 @@ export class GitHubService {
     });
   }
 
+  private calculateDiffPosition(patch: string | undefined, targetLine: number): number | null {
+    if (!patch) {
+      return null;
+    }
+
+    const lines = patch.split('\n');
+    let currentLine = 0;
+    let diffPosition = 0;
+
+    for (const line of lines) {
+      if (line.startsWith('@@')) {
+        const match = line.match(/@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+
+        if (match) {
+          currentLine = parseInt(match[1], 10) - 1;
+        }
+        diffPosition++;
+        continue;
+      }
+
+      if (!line.startsWith('-')) {
+        currentLine++;
+      }
+      diffPosition++;
+
+      if (currentLine === targetLine) {
+        return diffPosition;
+      }
+    }
+
+    return null;
+  }
+
   async createReview(
     owner: string,
     repo: string,
@@ -172,6 +205,35 @@ export class GitHubService {
       body: string;
     }[]
   ): Promise<void> {
+    const { data: files } = await this.octokit.pulls.listFiles({
+      owner,
+      repo,
+      pull_number: prNumber,
+    });
+
+    const filePatches = new Map(files.map((file) => [file.filename, file.patch]));
+
+    const validComments = comments?.flatMap((comment) => {
+      const patch = filePatches.get(comment.path);
+      const position = this.calculateDiffPosition(patch, comment.position);
+
+      if (position !== null) {
+        return [
+          {
+            path: comment.path,
+            position,
+            body: comment.body,
+          },
+        ];
+      }
+
+      core.warning(
+        `Skipping comment for ${comment.path}:${comment.position} - position not found in diff`
+      );
+
+      return [];
+    });
+
     await this.octokit.pulls.createReview({
       owner,
       repo,
@@ -179,7 +241,7 @@ export class GitHubService {
       commit_id,
       body,
       event,
-      comments,
+      comments: validComments,
     });
   }
 
