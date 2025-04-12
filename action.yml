@@ -43,10 +43,6 @@ inputs:
     description: 'Whether to analyze code performance'
     required: false
     default: 'true'
-  enable-test-coverage:
-    description: 'Whether to analyze test coverage'
-    required: false
-    default: 'true'
 runs:
   using: 'node20'
   main: 'dist/index.js'
