@@ -17,6 +17,7 @@ export interface LlmService {
     indexedCodebase: IndexedCodebase;
     pullRequest: PullRequestInfo;
   }): Promise<CodeReviewResult>;
+  translateContent(content: string, targetLanguage: string): Promise<string>;
 }
 
 export class GeminiService implements LlmService {
@@ -202,6 +203,20 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure, without an
       };
     }
   }
+
+  async translateContent(content: string, targetLanguage: string): Promise<string> {
+    if (targetLanguage === 'en') {
+      return content;
+    }
+
+    const prompt = `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
+
+${content}`;
+
+    const response = await this.generateContent(prompt);
+
+    return response.content;
+  }
 }
 
 export class OpenAIService implements LlmService {
@@ -371,6 +386,20 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure, without an
       };
     }
   }
+
+  async translateContent(content: string, targetLanguage: string): Promise<string> {
+    if (targetLanguage === 'en') {
+      return content;
+    }
+
+    const prompt = `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
+
+${content}`;
+
+    const response = await this.generateContent(prompt);
+
+    return response.content;
+  }
 }
 
 export class AnthropicService implements LlmService {
@@ -539,6 +568,20 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure, without an
       };
     }
   }
+
+  async translateContent(content: string, targetLanguage: string): Promise<string> {
+    if (targetLanguage === 'en') {
+      return content;
+    }
+
+    const prompt = `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
+
+${content}`;
+
+    const response = await this.generateContent(prompt);
+
+    return response.content;
+  }
 }
 
 export function createLlmService(config: LlmConfig): LlmService {
@@ -572,5 +615,9 @@ export class LLMService implements LlmService {
     pullRequest: PullRequestInfo;
   }): Promise<CodeReviewResult> {
     return this.service.performCodeReview(params);
+  }
+
+  async translateContent(content: string, targetLanguage: string): Promise<string> {
+    return this.service.translateContent(content, targetLanguage);
   }
 }

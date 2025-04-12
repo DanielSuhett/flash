@@ -5,6 +5,7 @@ export interface LlmConfig {
   apiKey: string;
   endpoint?: string;
   model: string;
+  outputLanguage: string;
 }
 
 export interface AnalysisConfig {

@@ -29,6 +29,7 @@ export class WorkflowService {
       apiKey: config.llm.apiKey,
       endpoint: config.llm.endpoint,
       model: config.llm.model,
+      outputLanguage: config.llm.outputLanguage,
     };
 
     this.llmService = createLlmService(llmConfig);
@@ -101,15 +102,23 @@ export class WorkflowService {
   }
 
   private async postReviewComment(
-    pullRequestInfo: PullRequestInfo,
+    pullRequest: PullRequestInfo,
     reviewResult: CodeReviewResult,
     analysisResult: ReviewResult
   ): Promise<void> {
-    const { owner, repo, prNumber } = pullRequestInfo;
-    const comment = this.buildReviewComment(reviewResult, analysisResult);
+    let comment = this.buildReviewComment(reviewResult, analysisResult);
 
-    core.info(`Creating comment: ${comment}`);
-    await this.githubService.createComment(owner, repo, prNumber, comment);
+    if (this.config.llm.outputLanguage !== 'en') {
+      core.info(`Translating review to ${this.config.llm.outputLanguage}...`);
+      comment = await this.llmService.translateContent(comment, this.config.llm.outputLanguage);
+    }
+
+    await this.githubService.createComment(
+      pullRequest.owner,
+      pullRequest.repo,
+      pullRequest.prNumber,
+      comment
+    );
   }
 
   private buildReviewComment(reviewResult: CodeReviewResult, analysisResult: ReviewResult): string {

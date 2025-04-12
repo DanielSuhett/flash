@@ -9,6 +9,7 @@ export function loadActionConfig(): ActionConfig {
       apiKey: core.getInput('llm-api-key', { required: true }),
       endpoint: core.getInput('llm-endpoint', { required: false }),
       model: core.getInput('llm-model', { required: true }),
+      outputLanguage: core.getInput('output-language', { required: false }) || 'en',
     },
     analysis: {
       enableMetrics: core.getBooleanInput('enable-metrics', { required: false }),
