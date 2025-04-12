@@ -1,3 +1,5 @@
+import { CodeReviewResult } from './index.js';
+
 export type LlmProvider = 'gemini' | 'openai' | 'anthropic';
 
 export interface LlmConfig {
@@ -45,4 +47,5 @@ export interface ReviewResult {
   metrics: CodeMetrics;
   securityIssues: string[];
   performanceIssues: string[];
+  review?: CodeReviewResult;
 }

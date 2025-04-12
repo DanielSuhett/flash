@@ -64,21 +64,15 @@ export class WorkflowService {
         );
       }
 
-      core.info('Performing code analysis...');
-      const analysisResult = await this.analyzeCodebase(indexedCodebase);
-
-      core.info('Performing code review with LLM...');
-      const reviewResult = await this.llmService.performCodeReview({
-        indexedCodebase,
-        pullRequest: prWithContents,
-      });
+      core.info('Performing combined code analysis and review...');
+      const analysisResult = await this.analyzeCodebase(indexedCodebase, pullRequestInfo);
 
       core.info('Posting review results...');
-      await this.postReviewComment(pullRequestInfo, reviewResult, analysisResult);
+      await this.postReviewComment(pullRequestInfo, analysisResult.review, analysisResult);
 
       if (
         this.config.review.autoApprove &&
-        reviewResult.approvalRecommended &&
+        analysisResult.review?.approvalRecommended &&
         this.shouldAutoApprove(analysisResult)
       ) {
         core.info('Auto-approval is enabled and recommended. Processing...');
@@ -103,9 +97,15 @@ export class WorkflowService {
 
   private async postReviewComment(
     pullRequest: PullRequestInfo,
-    reviewResult: CodeReviewResult,
+    reviewResult: CodeReviewResult | undefined,
     analysisResult: ReviewResult
   ): Promise<void> {
+    if (!reviewResult) {
+      core.warning('No review result found. Skipping review comment.');
+
+      return;
+    }
+
     let comment = this.buildReviewComment(reviewResult, analysisResult);
 
     if (this.config.llm.outputLanguage !== 'en') {
@@ -255,8 +255,11 @@ export class WorkflowService {
     }
   }
 
-  private async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
-    const analysisResult = await this.analysisService.analyzeCodebase(codebase);
+  private async analyzeCodebase(
+    codebase: IndexedCodebase,
+    pullRequest: PullRequestInfo
+  ): Promise<ReviewResult> {
+    const analysisResult = await this.analysisService.analyzeCodebase(codebase, pullRequest);
 
     return analysisResult;
   }

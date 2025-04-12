@@ -1,6 +1,7 @@
 import { AnalysisConfig, CodeMetrics, ReviewResult } from '../types/config.js';
 import { IndexedCodebase } from '../types/index.js';
 import { LlmService } from '../llm/llm-service.js';
+import { PullRequestInfo } from '../types/index.js';
 
 interface AnalysisResponse {
   metrics: {
@@ -14,6 +15,18 @@ interface AnalysisResponse {
     performance: string[];
   };
   summary: string;
+  review: {
+    overallQuality: number;
+    approvalRecommended: boolean;
+    comments: {
+      file: string;
+      startLine: number;
+      endLine: number;
+      severity: string;
+      category: string;
+      message: string;
+    }[];
+  };
 }
 
 export class AnalysisService {
@@ -22,8 +35,11 @@ export class AnalysisService {
     private llmService: LlmService
   ) {}
 
-  async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
-    const analysis = await this.performAnalysis(codebase);
+  async analyzeCodebase(
+    codebase: IndexedCodebase,
+    pullRequest?: PullRequestInfo
+  ): Promise<ReviewResult> {
+    const analysis = await this.performAnalysis(codebase, pullRequest);
 
     return {
       summary: analysis.summary,
@@ -34,14 +50,21 @@ export class AnalysisService {
     };
   }
 
-  private async performAnalysis(codebase: IndexedCodebase): Promise<AnalysisResponse> {
+  private async performAnalysis(
+    codebase: IndexedCodebase,
+    pullRequest?: PullRequestInfo
+  ): Promise<AnalysisResponse> {
     const codebaseSummary = this.buildCodebaseSummary(codebase);
-    const prompt = `Analyze the following TypeScript codebase and provide a comprehensive review with metrics and issues.
+    const prSummary = pullRequest ? this.buildPRSummary(pullRequest) : '';
+    const prompt = `You are an expert TypeScript code reviewer. Please analyze the following codebase${
+      pullRequest ? ' and review the pull request changes' : ''
+    }:
 
+${prSummary ? `Pull Request Changes:\n${prSummary}\n\n` : ''}
 Codebase Structure:
 ${codebaseSummary}
 
-Please provide a detailed analysis with the following structure:
+Please provide a comprehensive analysis with the following structure:
 1. Code Metrics (all scores from 0-10):
    - Complexity score
    - Maintainability score
@@ -52,7 +75,19 @@ Please provide a detailed analysis with the following structure:
    - Security vulnerabilities
    - Performance bottlenecks
 
-3. A summary of the overall code quality and recommendations
+3. A summary of the overall code quality and recommendations${
+      pullRequest ? ' including review of the changes' : ''
+    }
+
+${
+  pullRequest
+    ? `4. Code Review Details:
+   - File and line numbers
+   - Severity (error, warning, info, suggestion)
+   - Category (type-safety, performance, maintainability, etc.)
+   - Specific suggestions for improvement`
+    : ''
+}
 
 IMPORTANT: Return ONLY a valid JSON object with this exact structure:
 {
@@ -64,14 +99,33 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
   },
   "issues": {
     "security": string[],
-    "performance": string[],
+    "performance": string[]
   },
-  "summary": string
+  "summary": string${
+    pullRequest
+      ? `,
+  "review": {
+    "overallQuality": number,
+    "approvalRecommended": boolean,
+    "comments": [
+      {
+        "file": string,
+        "startLine": number,
+        "endLine": number,
+        "severity": "error" | "warning" | "info" | "suggestion",
+        "category": string,
+        "message": string
+      }
+    ]
+  }`
+      : ''
+  }
 }`;
 
     const response = await this.llmService.generateContent(prompt);
+    const result = JSON.parse(response.content);
 
-    return JSON.parse(response.content);
+    return result;
   }
 
   private buildCodebaseSummary(codebase: IndexedCodebase): string {
@@ -100,6 +154,23 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
     return ['FILES:', summary.join('\n'), 'DEPENDENCIES:', dependencies, 'IMPORTS:', imports].join(
       '\n'
     );
+  }
+
+  private buildPRSummary(pullRequest: PullRequestInfo): string {
+    const summary = [
+      `Title: ${pullRequest.title}`,
+      `Description: ${pullRequest.description || 'No description provided'}`,
+      '\nChanged Files:',
+    ];
+
+    for (const file of pullRequest.files) {
+      summary.push(`${file.filename} (${file.additions} additions, ${file.deletions} deletions)`);
+      if (file.contents) {
+        summary.push('```typescript\n' + file.contents + '\n```');
+      }
+    }
+
+    return summary.join('\n');
   }
 
   private generateSuggestions(
