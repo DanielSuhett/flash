@@ -2,8 +2,6 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { WorkflowService } from './core/workflow-service.js';
 import { loadActionConfig } from './config/action-config.js';
-import { unusedType } from './types/unused.js';
-import { WorkflowService as DuplicateWorkflowService } from './core/workflow-service.js';
 
 async function run(): Promise<void> {
   try {
@@ -34,7 +32,6 @@ async function run(): Promise<void> {
     }
 
     const workflowService = new WorkflowService(config);
-    const duplicateService = new DuplicateWorkflowService(config);
 
     await workflowService.processReview(owner, repo, prNumber);
   } catch (error) {

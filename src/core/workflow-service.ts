@@ -6,8 +6,6 @@ import { LLMService } from '../llm/llm-service.js';
 import { AnalysisService } from './analysis-service.js';
 import { createLlmService } from '../llm/llm-service.js';
 import { LlmConfig, ReviewResult } from '../types/config.js';
-import { unusedImport } from '../types/unused.js';
-import { duplicateImport } from '../types/index.js';
 
 export class WorkflowService {
   private config: ActionConfig;
