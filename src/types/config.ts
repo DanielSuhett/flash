@@ -11,7 +11,6 @@ export interface AnalysisConfig {
   enableMetrics: boolean;
   enableSecurity: boolean;
   enablePerformance: boolean;
-  enableDocumentation: boolean;
 }
 
 export interface ReviewConfig {
@@ -35,7 +34,6 @@ export interface ActionConfig {
 export interface CodeMetrics {
   complexity: number;
   maintainability: number;
-  documentationCoverage: number;
   securityScore: number;
   performanceScore: number;
 }
@@ -46,5 +44,4 @@ export interface ReviewResult {
   metrics: CodeMetrics;
   securityIssues: string[];
   performanceIssues: string[];
-  documentationIssues: string[];
 }

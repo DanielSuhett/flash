@@ -6,14 +6,12 @@ interface AnalysisResponse {
   metrics: {
     complexity: number;
     maintainability: number;
-    documentationCoverage: number;
     securityScore: number;
     performanceScore: number;
   };
   issues: {
     security: string[];
     performance: string[];
-    documentation: string[];
   };
   summary: string;
 }
@@ -33,7 +31,6 @@ export class AnalysisService {
       metrics: analysis.metrics,
       securityIssues: this.config.enableSecurity ? analysis.issues.security : [],
       performanceIssues: this.config.enablePerformance ? analysis.issues.performance : [],
-      documentationIssues: this.config.enableDocumentation ? analysis.issues.documentation : [],
     };
   }
 
@@ -45,17 +42,15 @@ Codebase Structure:
 ${codebaseSummary}
 
 Please provide a detailed analysis with the following structure:
-1. Code Metrics (all scores from 0-10 except documentation coverage which is 0-100):
+1. Code Metrics (all scores from 0-10):
    - Complexity score
    - Maintainability score
-   - Documentation coverage percentage
    - Security score
    - Performance score
 
 2. Issues found:
    - Security vulnerabilities
    - Performance bottlenecks
-   - Documentation gaps
 
 3. A summary of the overall code quality and recommendations
 
@@ -64,14 +59,12 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
   "metrics": {
     "complexity": number,
     "maintainability": number,
-    "documentationCoverage": number,
     "securityScore": number,
     "performanceScore": number
   },
   "issues": {
     "security": string[],
     "performance": string[],
-    "documentation": string[]
   },
   "summary": string
 }`;
@@ -114,7 +107,6 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
     _issues: {
       security: string[];
       performance: string[];
-      documentation: string[];
     }
   ): string[] {
     const suggestions: string[] = [];
@@ -124,11 +116,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
     }
 
     if (metrics.maintainability < 80) {
-      suggestions.push('Improve code organization and documentation to enhance maintainability');
-    }
-
-    if (metrics.documentationCoverage < 80) {
-      suggestions.push('Increase documentation coverage to improve code understanding');
+      suggestions.push('Improve code organization to enhance maintainability');
     }
 
     if (metrics.securityScore < 8) {

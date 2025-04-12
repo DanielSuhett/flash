@@ -97,7 +97,6 @@ export class WorkflowService {
     return (
       analysisResult.metrics.complexity <= 7 &&
       analysisResult.metrics.maintainability >= 6 &&
-      analysisResult.metrics.documentationCoverage >= 80 &&
       analysisResult.metrics.securityScore >= 8 &&
       analysisResult.metrics.performanceScore >= 8 &&
       analysisResult.securityIssues.length === 0 &&
@@ -160,7 +159,6 @@ export class WorkflowService {
     const emojis = {
       complexity: this.getMetricEmoji(10 - metrics.complexity / 2),
       maintainability: this.getMetricEmoji(metrics.maintainability / 10),
-      documentationCoverage: this.getMetricEmoji(metrics.documentationCoverage / 10),
       securityScore: this.getMetricEmoji(metrics.securityScore),
       performanceScore: this.getMetricEmoji(metrics.performanceScore),
     };
@@ -169,7 +167,6 @@ export class WorkflowService {
       `## Code Quality Metrics\n\n` +
       `${emojis.complexity} **Complexity**: ${metrics.complexity}/10\n` +
       `${emojis.maintainability} **Maintainability**: ${metrics.maintainability}/100\n` +
-      `${emojis.documentationCoverage} **Documentation**: ${metrics.documentationCoverage}%\n` +
       `${emojis.securityScore} **Security**: ${metrics.securityScore}/10\n` +
       `${emojis.performanceScore} **Performance**: ${metrics.performanceScore}/10`
     );
@@ -194,14 +191,6 @@ export class WorkflowService {
       sections.push(
         `### ⚡ Performance Issues\n\n${analysisResult.performanceIssues
           .map((issue: string) => `- 🐢 ${issue}`)
-          .join('\n')}`
-      );
-    }
-
-    if (analysisResult.documentationIssues.length > 0) {
-      sections.push(
-        `### 📚 Documentation Issues\n\n${analysisResult.documentationIssues
-          .map((issue: string) => `- 📝 ${issue}`)
           .join('\n')}`
       );
     }
