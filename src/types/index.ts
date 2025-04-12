@@ -10,14 +10,15 @@ export interface ActionConfig {
 }
 
 export interface PullRequestInfo {
+  body: string;
   owner: string;
   repo: string;
   prNumber: number;
   title: string;
-  body: string | null;
+  description: string;
   baseBranch: string;
   headBranch: string;
-  author: string;
+  headSha: string;
   files: FileChange[];
 }
 

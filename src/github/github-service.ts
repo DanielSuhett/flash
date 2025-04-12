@@ -44,10 +44,11 @@ export class GitHubService {
       repo,
       prNumber,
       title: pr.title,
-      body: pr.body,
+      body: pr.body || '',
+      description: pr.body || '',
       baseBranch: pr.base.ref,
       headBranch: pr.head.ref,
-      author: pr.user?.login || '',
+      headSha: pr.head.sha,
       files: fileChanges,
     };
   }
@@ -164,7 +165,12 @@ export class GitHubService {
     prNumber: number,
     commit_id: string,
     body: string,
-    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
+    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT',
+    comments?: {
+      path: string;
+      position: number;
+      body: string;
+    }[]
   ): Promise<void> {
     await this.octokit.pulls.createReview({
       owner,
@@ -173,6 +179,7 @@ export class GitHubService {
       commit_id,
       body,
       event,
+      comments,
     });
   }
 

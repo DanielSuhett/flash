@@ -130,12 +130,34 @@ export class WorkflowService {
         .trim();
     }
 
-    await this.githubService.createComment(
+    const event =
+      reviewResult.overallQuality >= this.config.review.qualityThreshold
+        ? 'APPROVE'
+        : 'REQUEST_CHANGES';
+
+    const inlineComments = reviewResult.comments.map((comment) => ({
+      path: comment.file,
+      position: comment.startLine || 1,
+      body: `**${comment.severity.toUpperCase()}** (${comment.category}): ${comment.message}`,
+    }));
+
+    await this.githubService.createReview(
       pullRequest.owner,
       pullRequest.repo,
       pullRequest.prNumber,
-      comment
+      pullRequest.headSha,
+      comment,
+      event,
+      inlineComments
     );
+
+    if (event === 'APPROVE' && this.config.review.autoMerge) {
+      await this.githubService.mergePullRequest(
+        pullRequest.owner,
+        pullRequest.repo,
+        pullRequest.prNumber
+      );
+    }
   }
 
   private buildReviewComment(reviewResult: CodeReviewResult, analysisResult: ReviewResult): string {
