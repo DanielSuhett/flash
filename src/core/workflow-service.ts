@@ -132,8 +132,7 @@ export class WorkflowService {
       pullRequest.prNumber,
       pullRequest.headSha,
       comment,
-      event,
-      this.formatInlineComments(reviewResult.comments)
+      event
     );
 
     if (event === 'APPROVE' && this.config.review.autoMerge) {
@@ -158,11 +157,13 @@ export class WorkflowService {
   private buildReviewComment(reviewResult: CodeReviewResponse): string {
     const summary = this.buildSummarySection(reviewResult);
     const metrics = this.buildMetricsSection(reviewResult);
+    const suggestions = this.buildSuggestionsSection(reviewResult);
     const issues = this.buildIssuesSection(reviewResult);
     const approval = this.buildApprovalSection(reviewResult);
+    const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${approval}\n\n${metrics}\n\n${issues}${watermark}`;
+    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${metrics}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
@@ -178,6 +179,48 @@ export class WorkflowService {
 - Maintainability: ${reviewResult.metrics.maintainability}/10
 - Security: ${reviewResult.metrics.securityScore}/10
 - Performance: ${reviewResult.metrics.performanceScore}/10`;
+  }
+
+  private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
+    const sections = [];
+
+    if (reviewResult.suggestions.critical.length > 0) {
+      sections.push(
+        '## Critical Issues 🚨\n' +
+          reviewResult.suggestions.critical
+            .map(
+              (suggestion) =>
+                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
+            )
+            .join('\n')
+      );
+    }
+
+    if (reviewResult.suggestions.important.length > 0) {
+      sections.push(
+        '## Important Improvements ⚠️\n' +
+          reviewResult.suggestions.important
+            .map(
+              (suggestion) =>
+                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
+            )
+            .join('\n')
+      );
+    }
+
+    if (reviewResult.suggestions.minor.length > 0) {
+      sections.push(
+        '## Minor Suggestions 💡\n' +
+          reviewResult.suggestions.minor
+            .map(
+              (suggestion) =>
+                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
+            )
+            .join('\n')
+      );
+    }
+
+    return sections.length > 0 ? sections.join('\n\n') : '';
   }
 
   private buildIssuesSection(reviewResult: CodeReviewResponse): string {
@@ -205,6 +248,18 @@ export class WorkflowService {
     const status = isApproved ? 'Approved' : 'Changes Requested';
 
     return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/10`;
+  }
+
+  private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {
+    if (!reviewResult.tokenUsage) {
+      return '';
+    }
+
+    return `## Token Usage
+
+| Model | Prompt Tokens | Completion Tokens | Total Tokens |
+|-------|--------------|-------------------|--------------|
+| ${reviewResult.tokenUsage.model} | ${reviewResult.tokenUsage.promptTokens} | ${reviewResult.tokenUsage.completionTokens} | ${reviewResult.tokenUsage.totalTokens} |`;
   }
 
   private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {

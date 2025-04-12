@@ -7,7 +7,8 @@ export function getActionConfig(): ActionConfig {
     llm: {
       apiKey: core.getInput('llm-api-key', { required: true }),
       model: core.getInput('llm-model', { required: false }) || 'gemini-2.0-flash',
-      maxTokens: 2048,
+      outputLanguage: core.getInput('output-language', { required: false }) || 'en',
+      maxTokens: Number(core.getInput('llm-max-tokens', { required: false })) || 5000,
     },
     analysis: {
       enableMetrics: core.getBooleanInput('enable-metrics', { required: false }),

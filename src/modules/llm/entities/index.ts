@@ -46,11 +46,32 @@ export interface CodeReviewComment {
   message: string;
 }
 
+export interface TokenUsage {
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export interface CodeReviewSuggestion {
+  category: string;
+  file: string;
+  location: string;
+  description: string;
+}
+
+export interface CodeReviewSuggestions {
+  critical: CodeReviewSuggestion[];
+  important: CodeReviewSuggestion[];
+  minor: CodeReviewSuggestion[];
+}
+
 export interface CodeReviewResponse {
   metrics: CodeReviewMetrics;
   issues: CodeReviewIssues;
   summary: string;
   overallQuality: number;
   approvalRecommended: boolean;
-  comments: CodeReviewComment[];
+  suggestions: CodeReviewSuggestions;
+  tokenUsage: TokenUsage;
 }

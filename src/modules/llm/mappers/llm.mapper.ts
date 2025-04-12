@@ -15,6 +15,7 @@ You have 10 years of experience in developing and reviewing large-scale TypeScri
 You are familiar with common TypeScript best practices and design patterns. 
 You are specializing in web application development. Your task is to analyze Pull Request changes meticulously:
 
+Here's a summary of the PR changes:
 ${prSummary}
 
 Here's a summary of the codebase structure:
@@ -33,12 +34,16 @@ Please provide a detailed code review with the following structure:
    - Performance score (0-10)
 3. A quality score from 0-10 (not 0-100)
 4. A recommendation to approve or request changes
-5. Detailed comments about specific issues found, including:
-   - File and line numbers
-   - Severity (error, warning, info, suggestion)
+5. Organized suggestions by category:
+   - Critical issues that must be fixed
+   - Important improvements recommended
+   - Minor suggestions for better code quality
+   Each suggestion should include:
    - Category (type-safety, performance, maintainability, etc.)
+   - File location (file path and line numbers)
+   - Clear explanation of the issue and how to fix it
    - Exclude documentation and comment expectations from review criteria
-   - Specific suggestions for improvement
+
 6. List any security or performance issues identified
 7. Identify both critical errors that must be fixed and minor suggestions for improvement
 8. If problem is not related to the PR, suggest but don't put in review criteria
@@ -59,16 +64,38 @@ without any markdown formatting, code blocks, or additional text:
   "summary": string,
   "overallQuality": number,
   "approvalRecommended": boolean,
-  "comments": [
-    {
-      "file": string,
-      "startLine": number,
-      "endLine": number,
-      "severity": "error" | "warning" | "info" | "suggestion",
-      "category": string,
-      "message": string
-    }
-  ]
+  "suggestions": {
+    "critical": [
+      {
+        "category": string,
+        "file": string,
+        "location": string,
+        "description": string
+      }
+    ],
+    "important": [
+      {
+        "category": string,
+        "file": string,
+        "location": string,
+        "description": string
+      }
+    ],
+    "minor": [
+      {
+        "category": string,
+        "file": string,
+        "location": string,
+        "description": string
+      }
+    ]
+  },
+  "tokenUsage": {
+    "model": string,
+    "promptTokens": number,
+    "completionTokens": number,
+    "totalTokens": number
+  }
 }`;
   }
 
@@ -146,7 +173,13 @@ ${content}`;
         !Array.isArray(result.issues.performance) ||
         typeof result.overallQuality !== 'number' ||
         typeof result.approvalRecommended !== 'boolean' ||
-        !Array.isArray(result.comments)
+        !Array.isArray(result.suggestions.critical) ||
+        !Array.isArray(result.suggestions.important) ||
+        !Array.isArray(result.suggestions.minor) ||
+        typeof result.tokenUsage.model !== 'string' ||
+        typeof result.tokenUsage.promptTokens !== 'number' ||
+        typeof result.tokenUsage.completionTokens !== 'number' ||
+        typeof result.tokenUsage.totalTokens !== 'number'
       ) {
         throw new Error('Invalid response structure');
       }
@@ -169,7 +202,17 @@ ${content}`;
         summary: text.slice(0, 500),
         overallQuality: 5,
         approvalRecommended: false,
-        comments: [],
+        suggestions: {
+          critical: [],
+          important: [],
+          minor: [],
+        },
+        tokenUsage: {
+          model: '',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
       };
     }
   }

@@ -45,7 +45,7 @@ export class LlmRepository {
           },
         ],
         generation_config: {
-          max_output_tokens: this.config.maxTokens || 2048,
+          max_output_tokens: this.config.maxTokens,
           responseMimeType: 'application/json',
         },
       }),
