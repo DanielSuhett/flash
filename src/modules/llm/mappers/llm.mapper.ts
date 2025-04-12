@@ -155,9 +155,9 @@ ${content}`;
     return jsonMatch[1];
   }
 
-  static parseReviewResponse(text: string): CodeReviewResponse {
+  static parseReviewResponse(text: LlmResponse): CodeReviewResponse {
     try {
-      const cleanJson = this.parseJsonResponse(text);
+      const cleanJson = this.parseJsonResponse(text.content);
       const result = JSON.parse(cleanJson);
 
       if (
@@ -188,40 +188,10 @@ ${content}`;
         overallQuality,
         approvalRecommended,
         suggestions,
-        usageMetadata: {
-          promptTokenCount: result.tokenUsage?.promptTokens || 0,
-          candidatesTokenCount: result.tokenUsage?.completionTokens || 0,
-          totalTokenCount: result.tokenUsage?.totalTokens || 0,
-        },
+        usageMetadata: text.usage,
       };
     } catch (error) {
-      console.warn(`Failed to parse JSON response: ${error}`);
-
-      return {
-        metrics: {
-          complexity: 5,
-          maintainability: 5,
-          securityScore: 5,
-          performanceScore: 5,
-        },
-        issues: {
-          security: [],
-          performance: [],
-        },
-        summary: text.slice(0, 500),
-        overallQuality: 5,
-        approvalRecommended: false,
-        suggestions: {
-          critical: [],
-          important: [],
-          minor: [],
-        },
-        usageMetadata: {
-          promptTokenCount: 0,
-          candidatesTokenCount: 0,
-          totalTokenCount: 0,
-        },
-      };
+      throw new Error('Failed to parse JSON response');
     }
   }
 
@@ -229,13 +199,14 @@ ${content}`;
     return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   }
 
-  static mapGeminiResponse(data: GeminiResponse): LlmResponse {
+  static mapGeminiResponse(data: GeminiResponse, model: string): LlmResponse {
     return {
       content: data.candidates[0].content.parts[0].text,
       usage: {
-        promptTokens: data.usageMetadata?.promptTokenCount,
-        completionTokens: data.usageMetadata?.candidatesTokenCount,
-        totalTokens: data.usageMetadata?.totalTokenCount,
+        model,
+        promptTokens: data.usageMetadata?.promptTokenCount ?? 0,
+        completionTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+        totalTokens: data.usageMetadata?.totalTokenCount ?? 0,
       },
     };
   }

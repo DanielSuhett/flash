@@ -3,7 +3,7 @@ import { ActionConfig, PullRequestInfo, IndexedCodebase } from '../types/index.j
 import { GitHubService } from '../github/github-service.js';
 import { CodeIndexer } from '../indexing/indexer.js';
 import { LlmService } from '../modules/llm/llm.service.js';
-import { CodeReviewResponse, CodeReviewComment } from '../modules/llm/entities/index.js';
+import { CodeReviewResponse } from '../modules/llm/entities/index.js';
 import { LlmRepository } from '../modules/llm/llm.repository.js';
 
 export class WorkflowService {
@@ -144,16 +144,6 @@ export class WorkflowService {
     }
   }
 
-  private formatInlineComments(
-    comments: CodeReviewComment[]
-  ): { path: string; position: number; body: string }[] {
-    return comments.map((comment) => ({
-      path: comment.file,
-      position: comment.startLine || 1,
-      body: `**${comment.severity.toUpperCase()}** (${comment.category}): ${comment.message}`,
-    }));
-  }
-
   private buildReviewComment(reviewResult: CodeReviewResponse): string {
     const summary = this.buildSummarySection(reviewResult);
     const metrics = this.buildMetricsSection(reviewResult);
@@ -259,7 +249,7 @@ export class WorkflowService {
 
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
-| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokenCount} | ${reviewResult.usageMetadata.candidatesTokenCount} | ${reviewResult.usageMetadata.totalTokenCount} |`;
+| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
   }
 
   private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {

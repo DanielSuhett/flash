@@ -116,7 +116,15 @@ describe('LlmMapper', () => {
         }
       `;
 
-      const result = LlmMapper.parseReviewResponse(response);
+      const result = LlmMapper.parseReviewResponse({
+        content: response,
+        usage: {
+          model: 'test-model',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
+      });
 
       expect(result).toEqual({
         summary: 'Test summary',
@@ -137,7 +145,15 @@ describe('LlmMapper', () => {
 
     it('should return default values for invalid response', () => {
       const response = 'invalid json';
-      const result = LlmMapper.parseReviewResponse(response);
+      const result = LlmMapper.parseReviewResponse({
+        content: response,
+        usage: {
+          model: 'test-model',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
+      });
 
       expect(result).toEqual({
         summary: 'invalid json'.slice(0, 500),
@@ -149,7 +165,15 @@ describe('LlmMapper', () => {
 
     it('should return default values for invalid structure', () => {
       const response = '{"invalid": "structure"}';
-      const result = LlmMapper.parseReviewResponse(response);
+      const result = LlmMapper.parseReviewResponse({
+        content: response,
+        usage: {
+          model: 'test-model',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
+      });
 
       expect(result).toEqual({
         summary: '{"invalid": "structure"}'.slice(0, 500),

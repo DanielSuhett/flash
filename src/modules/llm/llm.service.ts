@@ -14,7 +14,7 @@ export class LlmService {
     const prompt = LlmMapper.buildReviewPrompt(indexedCodebase, pullRequest, appType);
     const response = await this.llmRepository.generateContent(prompt);
 
-    return LlmMapper.parseReviewResponse(response.content);
+    return LlmMapper.parseReviewResponse(response);
   }
 
   async translateText(content: string, targetLanguage: string): Promise<string> {

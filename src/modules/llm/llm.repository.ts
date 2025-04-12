@@ -27,7 +27,7 @@ export class LlmRepository {
       ${data?.usageMetadata?.totalTokenCount} total`
     );
 
-    return this.mapper.mapGeminiResponse(data);
+    return this.mapper.mapGeminiResponse(data, model);
   }
 
   private async executeRequest(endpoint: string, prompt: string): Promise<Response> {

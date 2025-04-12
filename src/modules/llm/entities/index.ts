@@ -4,9 +4,10 @@ export * from './gemini.entity.js';
 export interface LlmResponse {
   content: string;
   usage: {
-    promptTokens?: number;
-    completionTokens?: number;
-    totalTokens?: number;
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
   };
 }
 
@@ -73,9 +74,5 @@ export interface CodeReviewResponse {
   overallQuality: number;
   approvalRecommended: boolean;
   suggestions: CodeReviewSuggestions;
-  usageMetadata: {
-    promptTokenCount: number;
-    candidatesTokenCount: number;
-    totalTokenCount: number;
-  };
+  usageMetadata: TokenUsage;
 }

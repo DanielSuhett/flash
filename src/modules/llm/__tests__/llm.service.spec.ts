@@ -72,6 +72,7 @@ describe('LlmService', () => {
       const mockResponse: LlmResponse = {
         content: 'test content',
         usage: {
+          model: 'test-model',
           promptTokens: 10,
           completionTokens: 20,
           totalTokens: 30,
@@ -125,6 +126,7 @@ describe('LlmService', () => {
       const mockResponse: LlmResponse = {
         content: 'test content',
         usage: {
+          model: 'test-model',
           promptTokens: 10,
           completionTokens: 20,
           totalTokens: 30,
@@ -163,6 +165,7 @@ describe('LlmService', () => {
       const mockResponse: LlmResponse = {
         content: 'translated content',
         usage: {
+          model: 'test-model',
           promptTokens: 10,
           completionTokens: 20,
           totalTokens: 30,
