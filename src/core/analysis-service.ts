@@ -79,7 +79,7 @@ ${codebaseSummary}
 Please provide a comprehensive analysis with the following structure:
 1. Code Metrics (all scores from 0-10):
    - Complexity score
-   - Maintainability score (not consider comments)
+   - Maintainability score (0-10, not considering comments)
    - Security score
    - Performance score
 
@@ -206,7 +206,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
       suggestions.push('Consider refactoring complex functions to improve readability');
     }
 
-    if (metrics.maintainability < 8) {
+    if (metrics.maintainability < 6) {
       suggestions.push('Improve code organization to enhance maintainability');
     }
 

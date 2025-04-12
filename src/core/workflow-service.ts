@@ -181,7 +181,7 @@ export class WorkflowService {
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResult): string {
-    const approvalThreshold = this.config.review.qualityThreshold || 80;
+    const approvalThreshold = this.config.review.qualityThreshold;
     const isApproved = reviewResult.overallQuality >= approvalThreshold;
     const emoji = isApproved ? '✅' : '❌';
     const status = isApproved ? 'Approved' : 'Changes Requested';
@@ -205,7 +205,7 @@ export class WorkflowService {
     const metrics = analysisResult.metrics;
     const emojis = {
       complexity: this.getMetricEmoji(10 - metrics.complexity / 2),
-      maintainability: this.getMetricEmoji(metrics.maintainability / 10),
+      maintainability: this.getMetricEmoji(metrics.maintainability),
       securityScore: this.getMetricEmoji(metrics.securityScore),
       performanceScore: this.getMetricEmoji(metrics.performanceScore),
     };
@@ -213,7 +213,7 @@ export class WorkflowService {
     return (
       `## Code Quality Metrics\n\n` +
       `${emojis.complexity} **Complexity**: ${metrics.complexity}/10\n` +
-      `${emojis.maintainability} **Maintainability**: ${metrics.maintainability}/100\n` +
+      `${emojis.maintainability} **Maintainability**: ${metrics.maintainability}/10\n` +
       `${emojis.securityScore} **Security**: ${metrics.securityScore}/10\n` +
       `${emojis.performanceScore} **Performance**: ${metrics.performanceScore}/10`
     );
