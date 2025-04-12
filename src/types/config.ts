@@ -48,4 +48,10 @@ export interface ReviewResult {
   securityIssues: string[];
   performanceIssues: string[];
   review?: CodeReviewResult;
+  tokenUsage?: {
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }

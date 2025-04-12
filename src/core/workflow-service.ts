@@ -33,7 +33,7 @@ export class WorkflowService {
     };
 
     this.llmService = createLlmService(llmConfig);
-    this.analysisService = new AnalysisService(config.analysis, this.llmService);
+    this.analysisService = new AnalysisService(config, this.llmService);
   }
 
   async processReview(owner: string, repo: string, prNumber: number): Promise<void> {
@@ -169,8 +169,10 @@ export class WorkflowService {
     const metrics = this.buildMetricsSection(analysisResult);
     const issues = this.buildIssuesSection(analysisResult);
     const approval = this.buildApprovalSection(reviewResult);
+    const tokenUsage = this.buildTokenUsageSection(analysisResult);
+    const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${approval}\n\n${suggestions}\n\n${metrics}\n\n${issues}`;
+    return `${summary}\n\n${approval}\n\n${suggestions}\n\n${metrics}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResult): string {
@@ -262,5 +264,17 @@ export class WorkflowService {
     const analysisResult = await this.analysisService.analyzeCodebase(codebase, pullRequest);
 
     return analysisResult;
+  }
+
+  private buildTokenUsageSection(analysisResult: ReviewResult): string {
+    if (!analysisResult.tokenUsage) {
+      return '';
+    }
+
+    return `## Token Usage
+
+| Model | Prompt Tokens | Completion Tokens | Total Tokens |
+|-------|--------------|-------------------|--------------|
+| ${analysisResult.tokenUsage.model} | ${analysisResult.tokenUsage.promptTokens} | ${analysisResult.tokenUsage.completionTokens} | ${analysisResult.tokenUsage.totalTokens} |`;
   }
 }

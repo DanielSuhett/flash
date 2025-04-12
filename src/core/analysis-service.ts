@@ -1,4 +1,4 @@
-import { AnalysisConfig, CodeMetrics, ReviewResult } from '../types/config.js';
+import { ActionConfig, CodeMetrics, ReviewResult } from '../types/config.js';
 import { IndexedCodebase } from '../types/index.js';
 import { LlmService } from '../llm/llm-service.js';
 import { PullRequestInfo } from '../types/index.js';
@@ -27,11 +27,17 @@ interface AnalysisResponse {
       message: string;
     }[];
   };
+  tokenUsage: {
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 export class AnalysisService {
   constructor(
-    private config: AnalysisConfig,
+    private config: ActionConfig,
     private llmService: LlmService
   ) {}
 
@@ -45,8 +51,8 @@ export class AnalysisService {
       summary: analysis.summary,
       suggestions: this.generateSuggestions(analysis.metrics, analysis.issues),
       metrics: analysis.metrics,
-      securityIssues: this.config.enableSecurity ? analysis.issues.security : [],
-      performanceIssues: this.config.enablePerformance ? analysis.issues.performance : [],
+      securityIssues: this.config.analysis.enableSecurity ? analysis.issues.security : [],
+      performanceIssues: this.config.analysis.enablePerformance ? analysis.issues.performance : [],
       review:
         pullRequest && analysis.review
           ? {
@@ -59,6 +65,7 @@ export class AnalysisService {
               })),
             }
           : undefined,
+      tokenUsage: analysis.tokenUsage,
     };
   }
 
@@ -145,7 +152,15 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
     const response = await this.llmService.generateContent(prompt);
     const result = JSON.parse(response.content);
 
-    return result;
+    return {
+      ...result,
+      tokenUsage: {
+        model: this.config.llm.model,
+        promptTokens: response.usage.promptTokens,
+        completionTokens: response.usage.completionTokens,
+        totalTokens: response.usage.totalTokens,
+      },
+    };
   }
 
   private buildCodebaseSummary(codebase: IndexedCodebase): string {
