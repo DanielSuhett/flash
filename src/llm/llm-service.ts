@@ -29,7 +29,7 @@ export class GeminiService implements LlmService {
       throw new Error('Gemini API key is required');
     }
 
-    const model = this.config?.model || 'gemini-2.0 -flash';
+    const model = this.config?.model || 'gemini-2.0-flash';
     const endpoint =
       this.config?.endpoint ||
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.config.apiKey}`;
@@ -56,8 +56,6 @@ export class GeminiService implements LlmService {
     });
 
     const data = await response.json();
-
-    core.info(JSON.stringify(data));
 
     return {
       content: data.candidates[0].content.parts[0].text,

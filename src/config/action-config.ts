@@ -14,7 +14,6 @@ export function loadActionConfig(): ActionConfig {
       enableMetrics: core.getBooleanInput('enable-metrics', { required: false }),
       enableSecurity: core.getBooleanInput('enable-security', { required: false }),
       enablePerformance: core.getBooleanInput('enable-performance', { required: false }),
-      enableDocumentation: core.getBooleanInput('enable-documentation', { required: false }),
     },
     review: {
       autoApprove: core.getBooleanInput('auto-approve', { required: false }),

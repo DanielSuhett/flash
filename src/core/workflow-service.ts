@@ -98,9 +98,7 @@ export class WorkflowService {
       analysisResult.metrics.complexity <= 7 &&
       analysisResult.metrics.maintainability >= 6 &&
       analysisResult.metrics.securityScore >= 8 &&
-      analysisResult.metrics.performanceScore >= 8 &&
-      analysisResult.securityIssues.length === 0 &&
-      analysisResult.performanceIssues.length === 0
+      analysisResult.metrics.performanceScore >= 8
     );
   }
 
@@ -210,10 +208,6 @@ export class WorkflowService {
 
   private async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
     const analysisResult = await this.analysisService.analyzeCodebase(codebase);
-
-    if (analysisResult.metrics.complexity <= 10 && analysisResult.metrics.maintainability >= 80) {
-      return analysisResult;
-    }
 
     return analysisResult;
   }

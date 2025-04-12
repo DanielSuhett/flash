@@ -92,8 +92,6 @@ export class GitHubService {
     ref: string
   ): Promise<RepoItem[]> {
     try {
-      core.debug(`Getting content for ${owner}/${repo} at path: ${path || 'root'} (ref: ${ref})`);
-
       const response = await this.octokit.repos.getContent({
         owner,
         repo,
@@ -104,8 +102,6 @@ export class GitHubService {
       const data = response.data;
 
       if (Array.isArray(data)) {
-        core.debug(`Found ${data.length} items in ${path || 'root'}`);
-
         return data.map((item) => ({
           name: item.name,
           path: item.path,
@@ -113,8 +109,6 @@ export class GitHubService {
           sha: item.sha,
         }));
       } else if (data.type === 'file') {
-        core.debug(`Found single file: ${data.path}`);
-
         return [
           {
             name: data.name,
@@ -125,12 +119,8 @@ export class GitHubService {
         ];
       }
 
-      core.debug(`No content found in ${path || 'root'}`);
-
       return [];
     } catch (error) {
-      core.debug(`Error getting content for ${path || 'root'}: ${error}`);
-
       return [];
     }
   }
@@ -168,7 +158,6 @@ export class GitHubService {
     });
   }
 
-  // TODO: reduce the number of parameters
   async createReview(
     owner: string,
     repo: string,
