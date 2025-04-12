@@ -47,6 +47,18 @@ export class AnalysisService {
       metrics: analysis.metrics,
       securityIssues: this.config.enableSecurity ? analysis.issues.security : [],
       performanceIssues: this.config.enablePerformance ? analysis.issues.performance : [],
+      review:
+        pullRequest && analysis.review
+          ? {
+              summary: analysis.summary,
+              overallQuality: analysis.review.overallQuality,
+              approvalRecommended: analysis.review.approvalRecommended,
+              comments: analysis.review.comments.map((comment) => ({
+                ...comment,
+                severity: comment.severity as 'error' | 'warning' | 'info' | 'suggestion',
+              })),
+            }
+          : undefined,
     };
   }
 
