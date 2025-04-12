@@ -23,13 +23,27 @@ describe('LlmRepository', () => {
 
   it('should make request to Gemini API', async (): Promise<void> => {
     const prompt = 'test prompt';
-    const mockResponse = { ok: true, json: () => Promise.resolve({ text: 'response' }) };
+    const mockResponse = {
+      ok: true,
+      json: () => Promise.resolve({
+        candidates: [{
+          content: {
+            parts: [{ text: 'response' }]
+          }
+        }],
+        usageMetadata: {
+          promptTokenCount: 10,
+          candidatesTokenCount: 20,
+          totalTokenCount: 30
+        }
+      })
+    };
 
     mockFetch.mockResolvedValueOnce(mockResponse);
 
-    await repository.generateContent(prompt);
+    const result = await repository.generateContent(prompt);
 
-    const expectedEndpoint = `https://generativelanguage.googleapis.com/v1/models/${mockConfig.model}:generateContent`;
+    const expectedEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${mockConfig.model}:generateContent`;
 
     expect(mockFetch).toHaveBeenCalledWith(expectedEndpoint, {
       method: 'POST',
@@ -38,17 +52,38 @@ describe('LlmRepository', () => {
         'x-goog-api-key': mockConfig.apiKey,
       },
       body: JSON.stringify({
-        contents: [{ text: prompt }],
-        generationConfig: {
-          maxTokens: mockConfig.maxTokens,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+        generation_config: {
+          max_output_tokens: mockConfig.maxTokens,
+          responseMimeType: 'application/json',
         },
       }),
+    });
+
+    expect(result).toEqual({
+      content: 'response',
+      usage: {
+        model: mockConfig.model,
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
+      },
     });
   });
 
   it('should handle API errors', async (): Promise<void> => {
     const prompt = 'test prompt';
-    const mockResponse = { ok: false, status: 400, statusText: 'Bad Request' };
+    const mockResponse = {
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: () => Promise.resolve({ error: { message: 'Bad Request' } })
+    };
 
     mockFetch.mockResolvedValueOnce(mockResponse);
 

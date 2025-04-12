@@ -18,6 +18,10 @@ export class LlmService {
   }
 
   async translateText(content: string, targetLanguage: string): Promise<string> {
+    if (targetLanguage.toLowerCase() === 'en') {
+      return content;
+    }
+
     const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
     const response = await this.llmRepository.generateContent(prompt);
 

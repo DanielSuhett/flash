@@ -51,7 +51,7 @@ describe('LlmMapper', () => {
     it('should generate a valid review prompt', () => {
       const prompt = LlmMapper.buildReviewPrompt(mockIndexedCodebase, mockPullRequest, 'backend');
 
-      expect(prompt).toContain('You are an expert TypeScript code reviewer');
+      expect(prompt).toContain('You have 10 years of experience in developing and reviewing large-scale TypeScript applications');
       expect(prompt).toContain('Test PR');
       expect(prompt).toContain('Test description');
       expect(prompt).toContain('src/test.ts');
@@ -100,19 +100,29 @@ describe('LlmMapper', () => {
     it('should parse valid review response', () => {
       const response = `
         {
+          "metrics": {
+            "complexity": 5,
+            "maintainability": 7,
+            "securityScore": 8,
+            "performanceScore": 6
+          },
+          "issues": {
+            "security": ["test security issue"],
+            "performance": ["test performance issue"]
+          },
           "summary": "Test summary",
           "overallQuality": 8,
           "approvalRecommended": true,
-          "comments": [
-            {
-              "file": "test.ts",
-              "startLine": 1,
-              "endLine": 5,
-              "severity": "warning",
-              "category": "performance",
-              "message": "Test message"
-            }
-          ]
+          "suggestions": {
+            "critical": [],
+            "important": [],
+            "minor": []
+          },
+          "usageMetadata": {
+            "promptTokenCount": 100,
+            "candidatesTokenCount": 50,
+            "totalTokenCount": 150
+          }
         }
       `;
 
@@ -120,26 +130,37 @@ describe('LlmMapper', () => {
         content: response,
         usage: {
           model: 'test-model',
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
+          promptTokens: 100,
+          completionTokens: 50,
+          totalTokens: 150,
         },
       });
 
       expect(result).toEqual({
-        summary: 'Test summary',
+        metrics: {
+          complexity: 5,
+          maintainability: 7,
+          securityScore: 8,
+          performanceScore: 6
+        },
+        issues: {
+          security: ["test security issue"],
+          performance: ["test performance issue"]
+        },
+        summary: "Test summary",
         overallQuality: 8,
         approvalRecommended: true,
-        comments: [
-          {
-            file: 'test.ts',
-            startLine: 1,
-            endLine: 5,
-            severity: 'warning',
-            category: 'performance',
-            message: 'Test message',
-          },
-        ],
+        suggestions: {
+          critical: [],
+          important: [],
+          minor: []
+        },
+        usageMetadata: {
+          model: 'test-model',
+          promptTokens: 100,
+          completionTokens: 50,
+          totalTokens: 150
+        }
       });
     });
 
@@ -156,10 +177,30 @@ describe('LlmMapper', () => {
       });
 
       expect(result).toEqual({
-        summary: 'invalid json'.slice(0, 500),
-        overallQuality: 50,
+        metrics: {
+          complexity: 5,
+          maintainability: 5,
+          securityScore: 5,
+          performanceScore: 5
+        },
+        issues: {
+          security: [],
+          performance: []
+        },
+        summary: response.slice(0, 500),
+        overallQuality: 5,
         approvalRecommended: false,
-        comments: [],
+        suggestions: {
+          critical: [],
+          important: [],
+          minor: []
+        },
+        usageMetadata: {
+          model: 'test-model',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0
+        }
       });
     });
 
@@ -176,10 +217,30 @@ describe('LlmMapper', () => {
       });
 
       expect(result).toEqual({
-        summary: '{"invalid": "structure"}'.slice(0, 500),
-        overallQuality: 50,
+        metrics: {
+          complexity: 5,
+          maintainability: 5,
+          securityScore: 5,
+          performanceScore: 5
+        },
+        issues: {
+          security: [],
+          performance: []
+        },
+        summary: response.slice(0, 500),
+        overallQuality: 5,
         approvalRecommended: false,
-        comments: [],
+        suggestions: {
+          critical: [],
+          important: [],
+          minor: []
+        },
+        usageMetadata: {
+          model: 'test-model',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0
+        }
       });
     });
   });

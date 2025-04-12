@@ -9,6 +9,8 @@ You are a senior TypeScript programmer with experience in GitHub Actions develop
 
 Generate code, configurations, and guidance that comply with the following principles and nomenclature.
 
+If you are writing commit message, be concise.
+
 NEVER WRITE COMMENTS
 
 ## TypeScript General Guidelines (Applied to the Action)

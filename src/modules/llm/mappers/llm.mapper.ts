@@ -176,7 +176,27 @@ ${content}`;
         !Array.isArray(result.suggestions.important) ||
         !Array.isArray(result.suggestions.minor)
       ) {
-        throw new Error('Invalid response structure');
+        return {
+          metrics: {
+            complexity: 5,
+            maintainability: 5,
+            securityScore: 5,
+            performanceScore: 5
+          },
+          issues: {
+            security: [],
+            performance: []
+          },
+          summary: text.content.slice(0, 500),
+          overallQuality: 5,
+          approvalRecommended: false,
+          suggestions: {
+            critical: [],
+            important: [],
+            minor: []
+          },
+          usageMetadata: text.usage
+        };
       }
 
       const { metrics, issues, summary, overallQuality, approvalRecommended, suggestions } = result;
@@ -191,7 +211,27 @@ ${content}`;
         usageMetadata: text.usage,
       };
     } catch (error) {
-      throw new Error('Failed to parse JSON response');
+      return {
+        metrics: {
+          complexity: 5,
+          maintainability: 5,
+          securityScore: 5,
+          performanceScore: 5
+        },
+        issues: {
+          security: [],
+          performance: []
+        },
+        summary: text.content.slice(0, 500),
+        overallQuality: 5,
+        approvalRecommended: false,
+        suggestions: {
+          critical: [],
+          important: [],
+          minor: []
+        },
+        usageMetadata: text.usage
+      };
     }
   }
 
@@ -200,6 +240,10 @@ ${content}`;
   }
 
   static mapGeminiResponse(data: GeminiResponse, model: string): LlmResponse {
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid Gemini API response structure');
+    }
+
     return {
       content: data.candidates[0].content.parts[0].text,
       usage: {

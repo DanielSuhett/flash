@@ -17,6 +17,11 @@ export class LlmRepository {
     const model = this.config?.model || 'gemini-2.0-flash';
     const endpoint = this.mapper.buildGeminiEndpoint(model);
     const response = await this.executeRequest(endpoint, prompt);
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+
     const data = (await response.json()) as GeminiResponse;
 
     core.info(JSON.stringify(data));
