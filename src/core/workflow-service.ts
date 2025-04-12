@@ -135,11 +135,14 @@ export class WorkflowService {
         ? 'APPROVE'
         : 'REQUEST_CHANGES';
 
-    const inlineComments = reviewResult.comments.map((comment) => ({
-      path: comment.file,
-      position: comment.startLine || 1,
-      body: `**${comment.severity.toUpperCase()}** (${comment.category}): ${comment.message}`,
-    }));
+    const changedFiles = new Set(pullRequest.files.map((file) => file.filename));
+    const inlineComments = reviewResult.comments
+      .filter((comment) => changedFiles.has(comment.file))
+      .map((comment) => ({
+        path: comment.file,
+        position: comment.startLine || 1,
+        body: `**${comment.severity.toUpperCase()}** (${comment.category}): ${comment.message}`,
+      }));
 
     await this.githubService.createReview(
       pullRequest.owner,
