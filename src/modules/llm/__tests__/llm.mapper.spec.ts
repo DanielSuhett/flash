@@ -49,7 +49,7 @@ describe('LlmMapper', () => {
 
   describe('buildReviewPrompt', () => {
     it('should generate a valid review prompt', () => {
-      const prompt = LlmMapper.buildReviewPrompt(mockIndexedCodebase, mockPullRequest);
+      const prompt = LlmMapper.buildReviewPrompt(mockIndexedCodebase, mockPullRequest, 'backend');
 
       expect(prompt).toContain('You are an expert TypeScript code reviewer');
       expect(prompt).toContain('Test PR');

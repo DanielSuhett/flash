@@ -1,36 +1,25 @@
-import { CodeReviewResult, IndexedCodebase, PullRequestInfo } from '../../types/index.js';
-import { LlmConfig, LlmResponse } from './entities/index.js';
-import { LlmRepository } from './llm.repository.js';
+import { IndexedCodebase, PullRequestInfo } from '../../types/index.js';
 import { LlmMapper } from './mappers/llm.mapper.js';
+import { LlmRepository } from './llm.repository.js';
+import { CodeReviewResponse } from './entities/index.js';
 
 export class LlmService {
-  private repository: LlmRepository;
+  constructor(private readonly llmRepository: LlmRepository) {}
 
-  constructor(config: LlmConfig) {
-    this.repository = new LlmRepository(config);
-  }
-
-  async generateContent(prompt: string): Promise<LlmResponse> {
-    return this.repository.generateContent(prompt);
-  }
-
-  async performCodeReview(params: {
-    indexedCodebase: IndexedCodebase;
-    pullRequest: PullRequestInfo;
-  }): Promise<CodeReviewResult> {
-    const prompt = LlmMapper.buildReviewPrompt(params.indexedCodebase, params.pullRequest);
-    const response = await this.generateContent(prompt);
+  async reviewCode(
+    indexedCodebase: IndexedCodebase,
+    pullRequest: PullRequestInfo,
+    appType: 'frontend' | 'backend' | 'fullstack'
+  ): Promise<CodeReviewResponse> {
+    const prompt = LlmMapper.buildReviewPrompt(indexedCodebase, pullRequest, appType);
+    const response = await this.llmRepository.generateContent(prompt);
 
     return LlmMapper.parseReviewResponse(response.content);
   }
 
-  async translateContent(content: string, targetLanguage: string): Promise<string> {
-    if (targetLanguage === 'en') {
-      return content;
-    }
-
+  async translateText(content: string, targetLanguage: string): Promise<string> {
     const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
-    const response = await this.generateContent(prompt);
+    const response = await this.llmRepository.generateContent(prompt);
 
     return response.content;
   }
