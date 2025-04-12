@@ -259,7 +259,7 @@ export class WorkflowService {
 
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
-| gemini-2.0-flash | ${reviewResult.usageMetadata.promptTokenCount} | ${reviewResult.usageMetadata.candidatesTokenCount} | ${reviewResult.usageMetadata.totalTokenCount} |`;
+| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokenCount} | ${reviewResult.usageMetadata.candidatesTokenCount} | ${reviewResult.usageMetadata.totalTokenCount} |`;
   }
 
   private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {
