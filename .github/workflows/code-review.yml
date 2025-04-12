@@ -46,4 +46,6 @@ jobs:
           auto-approve: false
           auto-merge: false
           index-cache-enabled: true
-          pr-number: ${{ github.event.inputs.pr-number }} 
+          pr-number: ${{ github.event.inputs.pr-number }}
+          output-language: pt-br
+          quality-threshold: 70

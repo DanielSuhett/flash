@@ -110,7 +110,24 @@ export class WorkflowService {
 
     if (this.config.llm.outputLanguage !== 'en') {
       core.info(`Translating review to ${this.config.llm.outputLanguage}...`);
-      comment = await this.llmService.translateContent(comment, this.config.llm.outputLanguage);
+
+      const translatedResponse = await this.llmService.translateContent(
+        comment,
+        this.config.llm.outputLanguage
+      );
+
+      try {
+        const translatedJson = JSON.parse(translatedResponse);
+
+        comment = translatedJson.translation || translatedResponse;
+      } catch {
+        comment = translatedResponse;
+      }
+
+      comment = comment
+        .replace(/\\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
     }
 
     await this.githubService.createComment(
