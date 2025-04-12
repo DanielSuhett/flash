@@ -175,9 +175,9 @@ export class WorkflowService {
 
   private buildSummarySection(reviewResult: CodeReviewResult): string {
     const qualityEmoji =
-      reviewResult.overallQuality >= 80 ? '🟢' : reviewResult.overallQuality >= 50 ? '🟡' : '🔴';
+      reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
 
-    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/100**`;
+    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/10**`;
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResult): string {
@@ -186,7 +186,7 @@ export class WorkflowService {
     const emoji = isApproved ? '✅' : '❌';
     const status = isApproved ? 'Approved' : 'Changes Requested';
 
-    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/100`;
+    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/10`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResult): string {
