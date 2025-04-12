@@ -7,9 +7,8 @@ import {
 } from '../types/index.js';
 import { GitHubService } from '../github/github-service.js';
 import { CodeIndexer } from '../indexing/indexer.js';
-import { LlmService } from '../llm/llm-service.js';
+import { LlmService } from '../modules/llm/llm.service.js';
 import { AnalysisService } from './analysis-service.js';
-import { createLlmService } from '../llm/llm-service.js';
 import { LlmConfig, ReviewResult } from '../types/config.js';
 
 export class WorkflowService {
@@ -25,14 +24,13 @@ export class WorkflowService {
     this.codeIndexer = new CodeIndexer(config.githubToken);
 
     const llmConfig: LlmConfig = {
-      provider: config.llm.provider,
       apiKey: config.llm.apiKey,
-      endpoint: config.llm.endpoint,
       model: config.llm.model,
       outputLanguage: config.llm.outputLanguage,
+      maxTokens: config.llm.maxTokens,
     };
 
-    this.llmService = createLlmService(llmConfig);
+    this.llmService = new LlmService(llmConfig);
     this.analysisService = new AnalysisService(config, this.llmService);
   }
 
@@ -113,7 +111,7 @@ export class WorkflowService {
 
       const translatedResponse = await this.llmService.translateContent(
         comment,
-        this.config.llm.outputLanguage
+        this.config.llm.outputLanguage || 'en'
       );
 
       try {

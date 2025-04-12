@@ -1,11 +1,11 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { WorkflowService } from './core/workflow-service.js';
-import { loadActionConfig } from './config/action-config.js';
+import { getActionConfig } from './config/action-config.js';
 
 async function run(): Promise<void> {
   try {
-    const config = loadActionConfig();
+    const config = getActionConfig();
     const context = github.context;
     const { owner, repo } = context.repo;
     let prNumber: number | undefined;

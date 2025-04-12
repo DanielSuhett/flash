@@ -51,12 +51,12 @@ module.exports = {
         selector: 'objectLiteralProperty',
         format: null,
         filter: {
-          regex: '^(Content-Type|Authorization|x-api-key|anthropic-version|max_tokens|pull_number|issue_number|commit_id|merge_method)$',
+          regex: '^(Content-Type|Authorization|x-api-key|anthropic-version|max_tokens|pull_number|issue_number|commit_id|merge_method|x-goog-api-key)$',
           match: true
         }
       }
     ],
-    'max-params': ['warn', { max: 6 }],
+    'max-params': ['warn', { max: 8 }],
     'no-multiple-empty-lines': ['error', { max: 1 }],
     'padding-line-between-statements': [
       'error',

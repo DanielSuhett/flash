@@ -1,6 +1,6 @@
 import { ActionConfig, CodeMetrics, ReviewResult } from '../types/config.js';
 import { IndexedCodebase } from '../types/index.js';
-import { LlmService } from '../llm/llm-service.js';
+import { LlmService } from '../modules/llm/llm.service.js';
 import { PullRequestInfo } from '../types/index.js';
 
 interface AnalysisResponse {
