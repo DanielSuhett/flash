@@ -79,14 +79,22 @@ ${codebaseSummary}
 Please provide a comprehensive analysis with the following structure:
 1. Code Metrics (all scores from 0-10):
    - Complexity score
-   - Maintainability score
+   - Maintainability score (not consider comments)
    - Security score
    - Performance score
 
 2. Issues found:
    - Security vulnerabilities
    - Performance bottlenecks
-
+   - Code that does not follow the project's coding standards
+   - Hardcoded values
+   - Magic numbers
+   - Magic strings
+   - Magic dates
+   - Magic times
+   - Magic locations
+   - Magic IPs
+   - Magic URLs
 3. A summary of the overall code quality and recommendations${
       pullRequest ? ' including review of the changes' : ''
     }
