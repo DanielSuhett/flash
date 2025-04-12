@@ -136,9 +136,9 @@ ${content}`;
     return {
       content: data.candidates[0].content.parts[0].text,
       usage: {
-        promptTokens: data.usageMetadata.promptTokenCount,
-        completionTokens: data.usageMetadata.candidatesTokenCount,
-        totalTokens: data.usageMetadata.totalTokenCount,
+        promptTokens: data?.usageMetadata?.promptTokenCount,
+        completionTokens: data?.usageMetadata?.candidatesTokenCount,
+        totalTokens: data?.usageMetadata?.totalTokenCount,
       },
     };
   }

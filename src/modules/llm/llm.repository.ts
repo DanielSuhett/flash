@@ -20,9 +20,9 @@ export class LlmRepository {
     const data = (await response.json()) as GeminiResponse;
 
     core.info(
-      `Tokens used: ${data.usageMetadata.promptTokenCount} prompt, 
-      ${data.usageMetadata.candidatesTokenCount} completion, 
-      ${data.usageMetadata.totalTokenCount} total`
+      `Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
+      ${data?.usageMetadata?.candidatesTokenCount} completion, 
+      ${data?.usageMetadata?.totalTokenCount} total`
     );
 
     return this.mapper.mapGeminiResponse(data);
