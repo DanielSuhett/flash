@@ -68,8 +68,8 @@ export interface CodeReviewResult {
   approvalRecommended: boolean;
   comments: {
     file: string;
-    startLine?: number;
-    endLine?: number;
+    startLine: number;
+    endLine: number;
     severity: 'error' | 'warning' | 'info' | 'suggestion';
     category: string;
     message: string;

@@ -99,7 +99,7 @@ ${codebaseSummary}
 
 Please provide a detailed code review with the following structure:
 1. A summary of the changes and their impact
-2. A quality score from 0-100
+2. A quality score from 0-10 (not 0-100)
 3. A recommendation to approve or request changes
 4. Detailed comments about specific issues found, including:
    - File and line numbers
@@ -110,7 +110,7 @@ Please provide a detailed code review with the following structure:
 IMPORTANT: Return ONLY a valid JSON object with this exact structure, without any markdown formatting, code blocks, or additional text:
 {
   "summary": "string",
-  "overallQuality": number,
+  "overallQuality": number (0-10),
   "approvalRecommended": boolean,
   "comments": [
     {
@@ -282,7 +282,7 @@ ${codebaseSummary}
 
 Please provide a detailed code review with the following structure:
 1. A summary of the changes and their impact
-2. A quality score from 0-100
+2. A quality score from 0-10 (not 0-100)
 3. A recommendation to approve or request changes
 4. Detailed comments about specific issues found, including:
    - File and line numbers
@@ -293,7 +293,7 @@ Please provide a detailed code review with the following structure:
 IMPORTANT: Return ONLY a valid JSON object with this exact structure, without any markdown formatting, code blocks, or additional text:
 {
   "summary": "string",
-  "overallQuality": number,
+  "overallQuality": number (0-10),
   "approvalRecommended": boolean,
   "comments": [
     {
@@ -464,7 +464,7 @@ ${codebaseSummary}
 
 Please provide a detailed code review with the following structure:
 1. A summary of the changes and their impact
-2. A quality score from 0-100
+2. A quality score from 0-10 (not 0-100)
 3. A recommendation to approve or request changes
 4. Detailed comments about specific issues found, including:
    - File and line numbers
@@ -475,7 +475,7 @@ Please provide a detailed code review with the following structure:
 IMPORTANT: Return ONLY a valid JSON object with this exact structure, without any markdown formatting, code blocks, or additional text:
 {
   "summary": "string",
-  "overallQuality": number,
+  "overallQuality": number (0-10),
   "approvalRecommended": boolean,
   "comments": [
     {

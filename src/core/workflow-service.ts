@@ -33,7 +33,7 @@ export class WorkflowService {
     };
 
     this.llmService = createLlmService(llmConfig);
-    this.analysisService = new AnalysisService(config.analysis, this.llmService);
+    this.analysisService = new AnalysisService(config, this.llmService);
   }
 
   async processReview(owner: string, repo: string, prNumber: number): Promise<void> {
@@ -64,21 +64,15 @@ export class WorkflowService {
         );
       }
 
-      core.info('Performing code analysis...');
-      const analysisResult = await this.analyzeCodebase(indexedCodebase);
-
-      core.info('Performing code review with LLM...');
-      const reviewResult = await this.llmService.performCodeReview({
-        indexedCodebase,
-        pullRequest: prWithContents,
-      });
+      core.info('Performing combined code analysis and review...');
+      const analysisResult = await this.analyzeCodebase(indexedCodebase, pullRequestInfo);
 
       core.info('Posting review results...');
-      await this.postReviewComment(pullRequestInfo, reviewResult, analysisResult);
+      await this.postReviewComment(pullRequestInfo, analysisResult.review, analysisResult);
 
       if (
         this.config.review.autoApprove &&
-        reviewResult.approvalRecommended &&
+        analysisResult.review?.approvalRecommended &&
         this.shouldAutoApprove(analysisResult)
       ) {
         core.info('Auto-approval is enabled and recommended. Processing...');
@@ -103,9 +97,15 @@ export class WorkflowService {
 
   private async postReviewComment(
     pullRequest: PullRequestInfo,
-    reviewResult: CodeReviewResult,
+    reviewResult: CodeReviewResult | undefined,
     analysisResult: ReviewResult
   ): Promise<void> {
+    if (!reviewResult) {
+      core.warning('No review result found. Skipping review comment.');
+
+      return;
+    }
+
     let comment = this.buildReviewComment(reviewResult, analysisResult);
 
     if (this.config.llm.outputLanguage !== 'en') {
@@ -169,24 +169,26 @@ export class WorkflowService {
     const metrics = this.buildMetricsSection(analysisResult);
     const issues = this.buildIssuesSection(analysisResult);
     const approval = this.buildApprovalSection(reviewResult);
+    const tokenUsage = this.buildTokenUsageSection(analysisResult);
+    const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${approval}\n\n${suggestions}\n\n${metrics}\n\n${issues}`;
+    return `${summary}\n\n${approval}\n\n${suggestions}\n\n${metrics}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResult): string {
     const qualityEmoji =
-      reviewResult.overallQuality >= 80 ? '🟢' : reviewResult.overallQuality >= 50 ? '🟡' : '🔴';
+      reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
 
-    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/100**`;
+    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/10**`;
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResult): string {
-    const approvalThreshold = this.config.review.qualityThreshold || 80;
+    const approvalThreshold = this.config.review.qualityThreshold;
     const isApproved = reviewResult.overallQuality >= approvalThreshold;
     const emoji = isApproved ? '✅' : '❌';
     const status = isApproved ? 'Approved' : 'Changes Requested';
 
-    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/100`;
+    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/10`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResult): string {
@@ -205,7 +207,7 @@ export class WorkflowService {
     const metrics = analysisResult.metrics;
     const emojis = {
       complexity: this.getMetricEmoji(10 - metrics.complexity / 2),
-      maintainability: this.getMetricEmoji(metrics.maintainability / 10),
+      maintainability: this.getMetricEmoji(metrics.maintainability),
       securityScore: this.getMetricEmoji(metrics.securityScore),
       performanceScore: this.getMetricEmoji(metrics.performanceScore),
     };
@@ -213,7 +215,7 @@ export class WorkflowService {
     return (
       `## Code Quality Metrics\n\n` +
       `${emojis.complexity} **Complexity**: ${metrics.complexity}/10\n` +
-      `${emojis.maintainability} **Maintainability**: ${metrics.maintainability}/100\n` +
+      `${emojis.maintainability} **Maintainability**: ${metrics.maintainability}/10\n` +
       `${emojis.securityScore} **Security**: ${metrics.securityScore}/10\n` +
       `${emojis.performanceScore} **Performance**: ${metrics.performanceScore}/10`
     );
@@ -255,9 +257,24 @@ export class WorkflowService {
     }
   }
 
-  private async analyzeCodebase(codebase: IndexedCodebase): Promise<ReviewResult> {
-    const analysisResult = await this.analysisService.analyzeCodebase(codebase);
+  private async analyzeCodebase(
+    codebase: IndexedCodebase,
+    pullRequest: PullRequestInfo
+  ): Promise<ReviewResult> {
+    const analysisResult = await this.analysisService.analyzeCodebase(codebase, pullRequest);
 
     return analysisResult;
+  }
+
+  private buildTokenUsageSection(analysisResult: ReviewResult): string {
+    if (!analysisResult.tokenUsage) {
+      return '';
+    }
+
+    return `## Token Usage
+
+| Model | Prompt Tokens | Completion Tokens | Total Tokens |
+|-------|--------------|-------------------|--------------|
+| ${analysisResult.tokenUsage.model} | ${analysisResult.tokenUsage.promptTokens} | ${analysisResult.tokenUsage.completionTokens} | ${analysisResult.tokenUsage.totalTokens} |`;
   }
 }
