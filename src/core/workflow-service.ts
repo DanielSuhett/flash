@@ -31,8 +31,6 @@ export class WorkflowService {
       model: config.llm.model,
     };
 
-    core.info(JSON.stringify(llmConfig));
-
     this.llmService = createLlmService(llmConfig);
     this.analysisService = new AnalysisService(config.analysis, this.llmService);
   }

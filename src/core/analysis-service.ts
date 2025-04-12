@@ -115,7 +115,7 @@ IMPORTANT: Return ONLY a valid JSON object with this exact structure:
       suggestions.push('Consider refactoring complex functions to improve readability');
     }
 
-    if (metrics.maintainability < 80) {
+    if (metrics.maintainability < 8) {
       suggestions.push('Improve code organization to enhance maintainability');
     }
 

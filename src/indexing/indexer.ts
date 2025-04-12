@@ -74,7 +74,6 @@ export class CodeIndexer {
 
     const processDirectory = async (dir: string): Promise<void> => {
       try {
-        core.debug(`Searching for TypeScript files in directory: ${dir || 'root'}`);
         const dirFiles = await this.githubService.getRepoContent(owner, repo, dir, branch);
 
         if (dirFiles && dirFiles.length > 0) {
@@ -106,8 +105,6 @@ export class CodeIndexer {
 
       return [];
     }
-
-    core.info(`Found ${files.length} TypeScript files in total: ${files.join(', ')}`);
 
     const prioritized = files.filter((file) =>
       prioritizedFiles.some((prioritized) => file.includes(prioritized))

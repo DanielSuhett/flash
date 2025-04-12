@@ -57,6 +57,10 @@ export class GeminiService implements LlmService {
 
     const data = await response.json();
 
+    core.info(
+      `Tokens used: ${data.usageMetadata.promptTokenCount} prompt, ${data.usageMetadata.candidatesTokenCount} completion, ${data.usageMetadata.totalTokenCount} total`
+    );
+
     return {
       content: data.candidates[0].content.parts[0].text,
       usage: {

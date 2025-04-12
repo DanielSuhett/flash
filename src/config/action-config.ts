@@ -18,7 +18,7 @@ export function loadActionConfig(): ActionConfig {
     review: {
       autoApprove: core.getBooleanInput('auto-approve', { required: false }),
       autoMerge: core.getBooleanInput('auto-merge', { required: false }),
-      qualityThreshold: Number(core.getInput('quality-threshold', { required: false })) || 80,
+      qualityThreshold: Number(core.getInput('quality-threshold', { required: false })) || 70,
     },
     index: {
       cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
