@@ -133,23 +133,13 @@ export class WorkflowService {
         ? 'APPROVE'
         : 'REQUEST_CHANGES';
 
-    const changedFiles = new Set(pullRequest.files.map((file) => file.filename));
-    const inlineComments = reviewResult.comments
-      .filter((comment) => changedFiles.has(comment.file))
-      .map((comment) => ({
-        path: comment.file,
-        position: comment.startLine || 1,
-        body: `**${comment.severity.toUpperCase()}** (${comment.category}): ${comment.message}`,
-      }));
-
     await this.githubService.createReview(
       pullRequest.owner,
       pullRequest.repo,
       pullRequest.prNumber,
       pullRequest.headSha,
       comment,
-      event,
-      inlineComments
+      event
     );
 
     if (event === 'APPROVE' && this.config.review.autoMerge) {
@@ -228,9 +218,7 @@ export class WorkflowService {
 
     if (analysisResult.securityIssues.length > 0) {
       sections.push(
-        `### 🔒 Security Issues\n\n${analysisResult.securityIssues
-          .map((issue: string) => `- ⚠️ ${issue}`)
-          .join('\n')}`
+        `### 🔒 Security Issues\n\n${analysisResult.securityIssues.map((issue: string) => `- ⚠️ ${issue}`).join('\n')}`
       );
     }
 
