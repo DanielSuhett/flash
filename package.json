@@ -10,7 +10,7 @@
     "types": "tsc --noEmit",
     "format": "prettier --write '**/*.ts'",
     "lint": "eslint src --ext .ts",
-    "all": "pnpm format && pnpm lint && pnpm build && pnpm test",
+    "lint:fix": "eslint src --ext .ts --fix",
     "prepare": "husky install"
   },
   "engines": {

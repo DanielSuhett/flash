@@ -56,7 +56,7 @@ jobs:
 |-------|-------------|----------|---------|
 | `github-token` | GitHub token for API access | Yes | N/A |
 | `llm-api-key` | API key for Google Gemini | Yes | N/A |
-| `llm-endpoint` | Custom endpoint URL for the Gemini API | No | Gemini Pro default endpoint |
+| `llm-model` | Gemini model to use | No | `gemini-2.0-flash` |
 | `auto-approve` | Whether to automatically approve PRs based on Gemini analysis | No | `false` |
 | `auto-merge` | Whether to automatically merge approved PRs | No | `false` |
 | `index-cache-enabled` | Whether to cache the indexed codebase between runs | No | `true` |

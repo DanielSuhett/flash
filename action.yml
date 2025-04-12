@@ -5,18 +5,11 @@ inputs:
   github-token:
     description: 'GitHub token for API access'
     required: true
-  llm-provider:
-    description: 'LLM provider to use (gemini, openai, anthropic)'
-    required: false
-    default: 'gemini'
   llm-api-key:
     description: 'API key for the selected LLM provider'
     required: true
-  llm-endpoint:
-    description: 'Custom endpoint URL for the LLM API'
-    required: false
   llm-model:
-    description: 'Model to use for the selected provider'
+    description: 'Gemini model to use (e.g., gemini-2.0-flash)'
     required: false
     default: 'gemini-2.0-flash'
   output-language:
@@ -48,10 +41,6 @@ inputs:
     default: 'true'
   enable-performance:
     description: 'Whether to analyze code performance'
-    required: false
-    default: 'true'
-  enable-test-coverage:
-    description: 'Whether to analyze test coverage'
     required: false
     default: 'true'
 runs:

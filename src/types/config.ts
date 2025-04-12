@@ -1,13 +1,10 @@
 import { CodeReviewResult } from './index.js';
 
-export type LlmProvider = 'gemini' | 'openai' | 'anthropic';
-
 export interface LlmConfig {
-  provider: LlmProvider;
   apiKey: string;
-  endpoint?: string;
   model: string;
-  outputLanguage: string;
+  maxTokens?: number;
+  outputLanguage?: string;
 }
 
 export interface AnalysisConfig {

@@ -1,15 +1,14 @@
 import * as core from '@actions/core';
-import { ActionConfig, LlmProvider } from '../types/index.js';
+import { ActionConfig } from '../types/index.js';
 
-export function loadActionConfig(): ActionConfig {
+export function getActionConfig(): ActionConfig {
   return {
     githubToken: core.getInput('github-token', { required: true }),
     llm: {
-      provider: core.getInput('llm-provider', { required: true }) as LlmProvider,
       apiKey: core.getInput('llm-api-key', { required: true }),
-      endpoint: core.getInput('llm-endpoint', { required: false }),
-      model: core.getInput('llm-model', { required: true }),
+      model: core.getInput('llm-model', { required: false }) || 'gemini-2.0-flash',
       outputLanguage: core.getInput('output-language', { required: false }) || 'en',
+      maxTokens: Number(core.getInput('llm-max-tokens', { required: false })) || 5000,
     },
     analysis: {
       enableMetrics: core.getBooleanInput('enable-metrics', { required: false }),
