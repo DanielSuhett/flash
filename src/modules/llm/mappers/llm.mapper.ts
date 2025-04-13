@@ -10,9 +10,15 @@ export class LlmMapper {
     const codebaseSummary = this.buildCodebaseSummary(indexedCodebase);
     const prSummary = this.buildPRSummary(pullRequest);
 
-    return `
-You have 10 years of experience in developing and reviewing large-scale applications.
-You are specializing in web application development and your task is to analyze Pull Request changes:
+    return `You are an expert code reviewer with 10 years of experience in developing and reviewing large-scale applications.
+You specialize in web application development and your task is to analyze Pull Request changes.
+
+SYSTEM INSTRUCTIONS:
+1. You MUST respond with ONLY a valid JSON object
+2. Do not include any markdown formatting, code blocks, or additional text
+3. The response must strictly follow the provided schema
+4. If no issues are found, return empty arrays for the issues fields
+5. Never accept critical issues when determining if the PR should be approved
 
 Here's a summary of the PR changes:
 ${prSummary}
@@ -37,17 +43,14 @@ Review Focus:
 7. If no issues are found, return an empty array for the issues field
 8. Never accept some critical issues when determining if the PR should be approved
 
-IMPORTANT: You MUST follow this schema, return ONLY a valid JSON object with this exact structure, 
-without any markdown formatting, code blocks, or additional text:
-
-See example response:
+REQUIRED RESPONSE FORMAT:
 {
   "issues": {
-    "security": ["Potential XSS vulnerability in user input handling"] // if no issues, return empty array
-    "performance": ["Inefficient database query in UserService"] // if no issues, return empty array
+    "security": [], // Array of security issues or empty array
+    "performance": [] // Array of performance issues or empty array
   },
-  "summary": "This PR implements user authentication with proper security measures",
-  "approvalRecommended": true,
+  "summary": "Brief summary of the changes and their impact",
+  "approvalRecommended": true, // boolean indicating if PR should be approved
   "suggestions": {
     "critical": [
       {
@@ -67,7 +70,7 @@ See example response:
     ]
   }
 }`;
-}
+  }
 
   static buildTranslationPrompt(content: string, targetLanguage: string): string {
     return `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
