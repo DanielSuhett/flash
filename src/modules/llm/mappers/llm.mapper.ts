@@ -136,39 +136,18 @@ ${content}`;
       const defaultResponse = {
         issues: {
           security: [],
-          performance: []
+          performance: [],
         },
         summary: 'Failed to parse LLM response',
-        approvalRecommended: false,
+        approvalRecommended: true,
         suggestions: {
           critical: [],
           important: [],
         },
-        usageMetadata: text.usage
+        usageMetadata: text.usage,
       };
 
       if (!result || typeof result !== 'object') {
-        return defaultResponse;
-      }
-
-      const validationErrors: string[] = [];
-
-      if (!result.summary || typeof result.summary !== 'string') {
-        validationErrors.push('Missing or invalid summary');
-      }
-      if (!result.issues) {
-        validationErrors.push('Missing or invalid issues structure');
-      }
-      if (typeof result.approvalRecommended !== 'boolean') {
-        validationErrors.push('Missing or invalid approvalRecommended');
-      }
-      if (!result.suggestions || !Array.isArray(result.suggestions.critical) || !Array.isArray(result.suggestions.important)) {
-        validationErrors.push('Missing or invalid suggestions structure');
-      }
-
-      if (validationErrors.length > 0) {
-        defaultResponse.summary = `Response validation failed: ${validationErrors.join(', ')}`;
-
         return defaultResponse;
       }
 
@@ -177,7 +156,7 @@ ${content}`;
       return {
         issues,
         summary,
-        approvalRecommended,
+        approvalRecommended: approvalRecommended == 'true' ? true : false,
         suggestions,
         usageMetadata: text.usage,
       };
@@ -185,7 +164,7 @@ ${content}`;
       const errorResponse = {
         issues: {
           security: [],
-          performance: []
+          performance: [],
         },
         summary: `Error parsing LLM response: ${error instanceof Error ? error.message : 'Unknown error'}`,
         approvalRecommended: false,
@@ -193,7 +172,7 @@ ${content}`;
           critical: [],
           important: [],
         },
-        usageMetadata: text.usage
+        usageMetadata: text.usage,
       };
 
       return errorResponse;

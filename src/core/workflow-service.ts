@@ -139,7 +139,7 @@ export class WorkflowService {
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
     const sections = [];
 
-    if (reviewResult.suggestions.critical.length > 0) {
+    if (reviewResult.suggestions?.critical.length > 0) {
       sections.push(
         '## Critical Issues 🚨\n\n' +
           reviewResult.suggestions.critical
@@ -151,7 +151,7 @@ export class WorkflowService {
       );
     }
 
-    if (reviewResult.suggestions.important.length > 0) {
+    if (reviewResult.suggestions?.important.length > 0) {
       sections.push(
         '## Important Improvements ⚠️\n\n' +
           reviewResult.suggestions.important
