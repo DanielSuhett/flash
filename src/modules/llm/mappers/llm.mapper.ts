@@ -21,8 +21,6 @@ Here's a summary of the codebase structure:
 ${codebaseSummary}
 
 Review Focus:
-Please provide a detailed code review with the following structure:
-
 1. A summary of the changes and their impact
 2. A recommendation to approve or request changes
 3. If problem is not related to the PR, suggest but don't put in review criteria
@@ -39,8 +37,10 @@ Please provide a detailed code review with the following structure:
 7. If no issues are found, return an empty array for the issues field
 8. Never accept some critical issues when determining if the PR should be approved
 
-IMPORTANT: RETURN ONLY A VALID JSON OBJECT WITH THIS EXACT STRUCTURE, 
-FOLLOW THIS SCHEMA STRICTLY TO AVOID PARSING ERRORS:
+IMPORTANT: You MUST follow this schema, return ONLY a valid JSON object with this exact structure, 
+without any markdown formatting, code blocks, or additional text:
+
+See example response:
 {
   "issues": {
     "security": ["Potential XSS vulnerability in user input handling"] // if no issues, return empty array
