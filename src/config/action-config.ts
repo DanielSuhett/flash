@@ -5,15 +5,10 @@ export function getActionConfig(): ActionConfig {
   return {
     githubToken: core.getInput('github-token', { required: true }),
     llm: {
-      apiKey: core.getInput('llm-api-key', { required: true }),
-      model: core.getInput('llm-model', { required: false }) || 'gemini-2.0-flash',
+      apiKey: core.getInput('gemini-api-key', { required: true }),
+      model: core.getInput('gemini-model', { required: false }) || 'gemini-2.0-flash',
       outputLanguage: core.getInput('output-language', { required: false }) || 'en',
       maxTokens: Number(core.getInput('llm-max-tokens', { required: false })) || 5000,
-    },
-    analysis: {
-      enableMetrics: core.getBooleanInput('enable-metrics', { required: false }),
-      enableSecurity: core.getBooleanInput('enable-security', { required: false }),
-      enablePerformance: core.getBooleanInput('enable-performance', { required: false }),
     },
     review: {
       autoApprove: core.getBooleanInput('auto-approve', { required: false }),

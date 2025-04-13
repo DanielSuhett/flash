@@ -49,27 +49,17 @@ export class WorkflowService {
       );
 
       if (indexedCodebase.files.length === 0) {
-        core.warning(
-          'No TypeScript files found in the repository. Review will be limited to changed files only.'
-        );
+        throw new Error('No TypeScript files found in the repository');
       }
 
       core.info('Performing code review...');
       const appType = this.determineAppType(indexedCodebase);
-      const reviewResult = await this.llmService.reviewCode(
-        indexedCodebase,
-        prWithContents,
-        appType
-      );
+      const reviewResult = await this.llmService.reviewCode(indexedCodebase, prWithContents, appType);
 
       core.info('Posting review results...');
       await this.postReviewComment(prWithContents, reviewResult);
 
-      if (
-        this.config.review.autoApprove &&
-        reviewResult.approvalRecommended &&
-        this.shouldAutoApprove(reviewResult)
-      ) {
+      if (this.config.review.autoApprove && reviewResult.approvalRecommended && this.shouldAutoApprove(reviewResult)) {
         core.info('Auto-approval is enabled and recommended. Processing...');
         await this.approveAndMergePR(prWithContents);
       }
@@ -83,16 +73,11 @@ export class WorkflowService {
 
   private determineAppType(codebase: IndexedCodebase): 'frontend' | 'backend' | 'fullstack' {
     const hasReactFiles = codebase.files.some(
-      (file) =>
-        file.path.includes('components') ||
-        file.path.includes('pages') ||
-        file.path.endsWith('.tsx')
+      (file) => file.path.includes('components') || file.path.includes('pages') || file.path.endsWith('.tsx')
     );
     const hasServerFiles = codebase.files.some(
       (file) =>
-        file.path.includes('controllers') ||
-        file.path.includes('services') ||
-        file.path.includes('repositories')
+        file.path.includes('controllers') || file.path.includes('services') || file.path.includes('repositories')
     );
 
     if (hasReactFiles && hasServerFiles) return 'fullstack';
@@ -110,21 +95,14 @@ export class WorkflowService {
     );
   }
 
-  private async postReviewComment(
-    pullRequest: PullRequestInfo,
-    reviewResult: CodeReviewResponse
-  ): Promise<void> {
+  private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {
     let comment = this.buildReviewComment(reviewResult);
 
     if (this.config.llm.outputLanguage && this.config.llm.outputLanguage !== 'en') {
-      core.info(`Translating review to ${this.config.llm.outputLanguage}...`);
       comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
     }
 
-    const event =
-      reviewResult.overallQuality >= this.config.review.qualityThreshold
-        ? 'APPROVE'
-        : 'REQUEST_CHANGES';
+    const event = reviewResult.overallQuality >= this.config.review.qualityThreshold ? 'APPROVE' : 'REQUEST_CHANGES';
 
     await this.githubService.createReview(
       pullRequest.owner,
@@ -136,11 +114,7 @@ export class WorkflowService {
     );
 
     if (event === 'APPROVE' && this.config.review.autoMerge) {
-      await this.githubService.mergePullRequest(
-        pullRequest.owner,
-        pullRequest.repo,
-        pullRequest.prNumber
-      );
+      await this.githubService.mergePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
     }
   }
 
@@ -157,8 +131,7 @@ export class WorkflowService {
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    const qualityEmoji =
-      reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
+    const qualityEmoji = reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
 
     return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/10**`;
   }
@@ -253,18 +226,10 @@ export class WorkflowService {
   }
 
   private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {
-    await this.githubService.approvePullRequest(
-      pullRequest.owner,
-      pullRequest.repo,
-      pullRequest.prNumber
-    );
+    await this.githubService.approvePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
 
     if (this.config.review.autoMerge) {
-      await this.githubService.mergePullRequest(
-        pullRequest.owner,
-        pullRequest.repo,
-        pullRequest.prNumber
-      );
+      await this.githubService.mergePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
     }
   }
 }
