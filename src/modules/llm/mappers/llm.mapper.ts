@@ -12,8 +12,7 @@ export class LlmMapper {
 
     return `
 You have 10 years of experience in developing and reviewing large-scale applications.
-You are specializing in web application developmentand your task is to analyze Pull Request changes
-Your task is to analyze Pull Request changes meticulously:
+You are specializing in web application development and your task is to analyze Pull Request changes:
 
 Here's a summary of the PR changes:
 ${prSummary}
@@ -40,14 +39,12 @@ Please provide a detailed code review with the following structure:
 7. If no issues are found, return an empty array for the issues field
 8. Never accept some critical issues when determining if the PR should be approved
 
-IMPORTANT: Return ONLY a valid JSON object with this exact structure, 
-without any markdown formatting, code blocks, or additional text.
-
-Example response format:
+IMPORTANT: RETURN ONLY A VALID JSON OBJECT WITH THIS EXACT STRUCTURE, 
+FOLLOW THIS SCHEMA STRICTLY TO AVOID PARSING ERRORS:
 {
   "issues": {
-    "security": ["Potential XSS vulnerability in user input handling"],
-    "performance": ["Inefficient database query in UserService"]
+    "security": ["Potential XSS vulnerability in user input handling"] // if no issues, return empty array
+    "performance": ["Inefficient database query in UserService"] // if no issues, return empty array
   },
   "summary": "This PR implements user authentication with proper security measures",
   "approvalRecommended": true,
@@ -70,7 +67,7 @@ Example response format:
     ]
   }
 }`;
-  }
+}
 
   static buildTranslationPrompt(content: string, targetLanguage: string): string {
     return `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
