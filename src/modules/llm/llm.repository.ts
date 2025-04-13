@@ -47,17 +47,17 @@ export class LlmRepository {
       body: JSON.stringify({
         contents: [
           {
-            role: 'system',
-            parts: [{ text: systemInstruction }],
-          },
-          {
             role: 'user',
             parts: prompt,
           },
         ],
+        system_instruction: {
+          parts: [{ text: systemInstruction }],
+        },
         generation_config: {
-          max_output_tokens: this.config.maxTokens,
           responseMimeType: returnJSON ? 'application/json' : 'text/plain',
+          maxOutputTokens: this.config.maxTokens,
+          temperature: 0.2,
         },
       }),
     });
