@@ -23,7 +23,7 @@ export class LlmService {
     }
 
     const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
-    const response = await this.llmRepository.generateContent(prompt);
+    const response = await this.llmRepository.generateContent(prompt, false);
 
     return response.content;
   }

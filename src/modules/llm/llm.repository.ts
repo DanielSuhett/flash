@@ -7,7 +7,7 @@ export class LlmRepository {
 
   private mapper = LlmMapper;
 
-  async generateContent(prompt: string): Promise<LlmResponse> {
+  async generateContent(prompt: string, returnJSON: boolean = true): Promise<LlmResponse> {
     core.info('Starting Gemini Service');
 
     if (!this.config?.apiKey) {
@@ -16,7 +16,7 @@ export class LlmRepository {
 
     const model = this.config?.model || 'gemini-2.0-flash';
     const endpoint = this.mapper.buildGeminiEndpoint(model);
-    const response = await this.executeRequest(endpoint, prompt);
+    const response = await this.executeRequest(endpoint, prompt, returnJSON);
 
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
@@ -35,7 +35,7 @@ export class LlmRepository {
     return this.mapper.mapGeminiResponse(data, model);
   }
 
-  private async executeRequest(endpoint: string, prompt: string): Promise<Response> {
+  private async executeRequest(endpoint: string, prompt: string, returnJSON: boolean = true): Promise<Response> {
     return fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -51,7 +51,7 @@ export class LlmRepository {
         ],
         generation_config: {
           max_output_tokens: this.config.maxTokens,
-          responseMimeType: 'application/json',
+          responseMimeType: returnJSON ? 'application/json' : 'text/plain',
         },
       }),
     });

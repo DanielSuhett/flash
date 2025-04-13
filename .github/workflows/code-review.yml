@@ -42,9 +42,9 @@ jobs:
         uses: ./.
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          llm-api-key: ${{ secrets.LLM_API_KEY }}
-          auto-approve: false
-          auto-merge: false
+          gemini-api-key: ${{ secrets.LLM_API_KEY }}
+          auto-approve: true
+          auto-merge: true
           index-cache-enabled: true
           pr-number: ${{ github.event.inputs.pr-number }}
           output-language: pt-BR

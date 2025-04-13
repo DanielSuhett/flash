@@ -5,13 +5,17 @@ inputs:
   github-token:
     description: 'GitHub token for API access'
     required: true
-  llm-api-key:
-    description: 'API key for the selected LLM provider'
+  gemini-api-key:
+    description: 'Gemini API Key'
     required: true
-  llm-model:
-    description: 'Gemini model to use (e.g., gemini-2.0-flash)'
+  gemini-model:
+    description: 'Gemini model to use (e.g., gemini-2.0-flash, gemini-2.5-pro)'
     required: false
     default: 'gemini-2.0-flash'
+  llm-max-tokens:
+    description: 'Maximum number of tokens to use for the review'
+    required: false
+    default: 5000
   output-language:
     description: 'Language code for the review output (e.g., en, es, fr, de, etc.)'
     required: false
@@ -19,7 +23,7 @@ inputs:
   auto-approve:
     description: 'Whether to automatically approve PRs based on analysis'
     required: false
-    default: 'true'
+    default: 'false'
   auto-merge:
     description: 'Whether to automatically merge approved PRs'
     required: false
@@ -31,18 +35,10 @@ inputs:
   pr-number: 
     description: 'Pull request number (for manual triggering)'
     required: false
-  enable-metrics:
-    description: 'Whether to generate code quality metrics'
+  quality-threshold:
+    description: 'Quality threshold for the review'
     required: false
-    default: 'true'
-  enable-security:
-    description: 'Whether to perform security vulnerability scanning'
-    required: false
-    default: 'true'
-  enable-performance:
-    description: 'Whether to analyze code performance'
-    required: false
-    default: 'true'
+    default: 7
 runs:
   using: 'node20'
   main: 'dist/index.js'

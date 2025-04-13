@@ -7,11 +7,6 @@ export interface LlmConfig {
   outputLanguage?: string;
 }
 
-export interface AnalysisConfig {
-  enableMetrics: boolean;
-  enableSecurity: boolean;
-  enablePerformance: boolean;
-}
 
 export interface ReviewConfig {
   autoApprove: boolean;
@@ -25,7 +20,6 @@ export interface IndexConfig {
 
 export interface ActionConfig {
   llm: LlmConfig;
-  analysis: AnalysisConfig;
   review: ReviewConfig;
   index: IndexConfig;
   prNumber?: number;

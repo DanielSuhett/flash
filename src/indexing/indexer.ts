@@ -70,7 +70,7 @@ export class CodeIndexer {
     imports: Record<string, string[]>
   ): Promise<string[]> {
     const files: string[] = [];
-    const baseDirs = ['', 'src', 'lib', 'packages', 'test', 'tests', '__tests__'];
+    const baseDirs = ['', 'src'];
 
     const processDirectory = async (dir: string): Promise<void> => {
       try {
