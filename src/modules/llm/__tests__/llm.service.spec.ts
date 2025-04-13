@@ -80,12 +80,6 @@ describe('LlmService', () => {
       };
 
       const mockReviewResult: CodeReviewResponse = {
-        metrics: {
-          complexity: 5,
-          maintainability: 5,
-          securityScore: 5,
-          performanceScore: 5
-        },
         issues: {
           security: [],
           performance: []
@@ -147,12 +141,6 @@ describe('LlmService', () => {
     };
 
     const mockReviewResult: CodeReviewResponse = {
-      metrics: {
-        complexity: 5,
-        maintainability: 5,
-        securityScore: 5,
-        performanceScore: 5
-      },
       issues: {
         security: [],
         performance: []

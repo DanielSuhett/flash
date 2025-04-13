@@ -87,12 +87,7 @@ export class WorkflowService {
   }
 
   private shouldAutoApprove(reviewResult: CodeReviewResponse): boolean {
-    return (
-      reviewResult.metrics.complexity <= 7 &&
-      reviewResult.metrics.maintainability >= 6 &&
-      reviewResult.metrics.securityScore >= 8 &&
-      reviewResult.metrics.performanceScore >= 8
-    );
+    return reviewResult.approvalRecommended;
   }
 
   private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {
@@ -120,27 +115,17 @@ export class WorkflowService {
 
   private buildReviewComment(reviewResult: CodeReviewResponse): string {
     const summary = this.buildSummarySection(reviewResult);
-    const metrics = this.buildMetricsSection(reviewResult);
     const suggestions = this.buildSuggestionsSection(reviewResult);
     const issues = this.buildIssuesSection(reviewResult);
     const approval = this.buildApprovalSection(reviewResult);
     const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${metrics}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-
     return `# Code Review Summary\n\n${reviewResult.summary}\n`;
-  }
-
-  private buildMetricsSection(reviewResult: CodeReviewResponse): string {
-    return `## Code Metrics
-- Complexity: ${reviewResult.metrics.complexity}/10
-- Maintainability: ${reviewResult.metrics.maintainability}/10
-- Security: ${reviewResult.metrics.securityScore}/10
-- Performance: ${reviewResult.metrics.performanceScore}/10`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {

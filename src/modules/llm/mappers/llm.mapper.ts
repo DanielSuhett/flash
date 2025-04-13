@@ -46,12 +46,6 @@ Please provide a detailed code review with the following structure:
 IMPORTANT: Return ONLY a valid JSON object with this exact structure, 
 without any markdown formatting, code blocks, or additional text:
 {
-  "metrics": {
-    "complexity": number,
-    "maintainability": number,
-    "securityScore": number,
-    "performanceScore": number
-  },
   "issues": {
     "security": string[],
     "performance": string[]
@@ -143,11 +137,6 @@ ${content}`;
 
       if (
         !result.summary ||
-        !result.metrics ||
-        typeof result.metrics.complexity !== 'number' ||
-        typeof result.metrics.maintainability !== 'number' ||
-        typeof result.metrics.securityScore !== 'number' ||
-        typeof result.metrics.performanceScore !== 'number' ||
         !result.issues ||
         !Array.isArray(result.issues.security) ||
         !Array.isArray(result.issues.performance) ||
@@ -156,12 +145,6 @@ ${content}`;
         !Array.isArray(result.suggestions.important)
       ) {
         return {
-          metrics: {
-            complexity: 5,
-            maintainability: 5,
-            securityScore: 5,
-            performanceScore: 5
-          },
           issues: {
             security: [],
             performance: []
@@ -176,10 +159,9 @@ ${content}`;
         };
       }
 
-      const { metrics, issues, summary, approvalRecommended, suggestions } = result;
+      const { issues, summary, approvalRecommended, suggestions } = result;
 
       return {
-        metrics,
         issues,
         summary,
         approvalRecommended,
@@ -188,12 +170,6 @@ ${content}`;
       };
     } catch (error) {
       return {
-        metrics: {
-          complexity: 5,
-          maintainability: 5,
-          securityScore: 5,
-          performanceScore: 5
-        },
         issues: {
           security: [],
           performance: []
