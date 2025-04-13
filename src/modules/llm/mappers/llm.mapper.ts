@@ -207,8 +207,12 @@ ${content}`;
       throw new Error('Invalid Gemini API response structure');
     }
 
+    const responseText = typeof data.candidates[0].content.parts[0].text === 'string' 
+      ? data.candidates[0].content.parts[0].text
+      : JSON.stringify(data.candidates[0].content.parts[0].text, null, 2);
+
     return {
-      content: data.candidates[0].content.parts[0].text,
+      content: responseText,
       usage: {
         model,
         promptTokens: data.usageMetadata?.promptTokenCount ?? 0,
