@@ -11,7 +11,6 @@ export interface LlmConfig {
 export interface ReviewConfig {
   autoApprove: boolean;
   autoMerge: boolean;
-  qualityThreshold: number;
 }
 
 export interface IndexConfig {
