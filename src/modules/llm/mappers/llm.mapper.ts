@@ -12,19 +12,13 @@ export class LlmMapper {
 
     return `
 You have 10 years of experience in developing and reviewing large-scale applications.
-You are specializing in web application development. 
-Your task is to analyze Pull Request changes 
-and provide constructive and concise feedback into the json format output in the final section:
+You are specializing in web application developmentand your task is to analyze Pull Request changes
 
 Here's a summary of the PR changes:
 ${prSummary}
 
----
-
 Here's a summary of the codebase structure:
 ${codebaseSummary}
-
----
 
 Review Focus:
 Please provide a detailed code review with the following structure:
