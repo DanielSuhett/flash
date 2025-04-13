@@ -36,35 +36,37 @@ Please provide a detailed code review with the following structure:
    - Exclude documentation and comment expectations from review criteria
 5. Pay attention to the following aspects relevant to a ${appType ?? 'fullstack'} application
 6. If a problem is not directly related to the diff in PR, ignore it
-8. If no issues are found, return an empty array for the issues field
-9. Never accept some critical issues when determining if the PR should be approved
+7. If no issues are found, return an empty array for the issues field
+8. Never accept some critical issues when determining if the PR should be approved
 
 IMPORTANT: Return ONLY a valid JSON object with this exact structure, 
-without any markdown formatting, code blocks, or additional text:
+without any markdown formatting, code blocks, or additional text.
+
+Example response format:
 {
   "issues": {
-    "security": string[],
-    "performance": string[]
+    "security": ["Potential XSS vulnerability in user input handling"],
+    "performance": ["Inefficient database query in UserService"]
   },
-  "summary": string,
-  "approvalRecommended": boolean,
+  "summary": "This PR implements user authentication with proper security measures",
+  "approvalRecommended": true,
   "suggestions": {
     "critical": [
       {
-        "category": string,
-        "file": string,
-        "location": string,
-        "description": string
+        "category": "security",
+        "file": "src/auth/auth.service.ts",
+        "location": "line 45",
+        "description": "Password hash should use a stronger algorithm"
       }
     ],
     "important": [
       {
-        "category": string,
-        "file": string,
-        "location": string,
-        "description": string
+        "category": "performance",
+        "file": "src/user/user.service.ts",
+        "location": "line 23",
+        "description": "Consider adding an index to improve query performance"
       }
-    ],
+    ]
   }
 }`;
   }
@@ -130,29 +132,43 @@ ${content}`;
     try {
       const cleanJson = this.parseJsonResponse(text.content);
       const result = JSON.parse(cleanJson);
+      const defaultResponse = {
+        issues: {
+          security: [],
+          performance: []
+        },
+        summary: 'Failed to parse LLM response',
+        approvalRecommended: false,
+        suggestions: {
+          critical: [],
+          important: [],
+        },
+        usageMetadata: text.usage
+      };
 
-      if (
-        !result.summary ||
-        !result.issues ||
-        !Array.isArray(result.issues.security) ||
-        !Array.isArray(result.issues.performance) ||
-        typeof result.approvalRecommended !== 'boolean' ||
-        !Array.isArray(result.suggestions.critical) ||
-        !Array.isArray(result.suggestions.important)
-      ) {
-        return {
-          issues: {
-            security: [],
-            performance: []
-          },
-          summary: text.content.slice(0, 500),
-          approvalRecommended: false,
-          suggestions: {
-            critical: [],
-            important: [],
-          },
-          usageMetadata: text.usage
-        };
+      if (!result || typeof result !== 'object') {
+        return defaultResponse;
+      }
+
+      const validationErrors: string[] = [];
+
+      if (!result.summary || typeof result.summary !== 'string') {
+        validationErrors.push('Missing or invalid summary');
+      }
+      if (!result.issues || !Array.isArray(result.issues.security) || !Array.isArray(result.issues.performance)) {
+        validationErrors.push('Missing or invalid issues structure');
+      }
+      if (typeof result.approvalRecommended !== 'boolean') {
+        validationErrors.push('Missing or invalid approvalRecommended');
+      }
+      if (!result.suggestions || !Array.isArray(result.suggestions.critical) || !Array.isArray(result.suggestions.important)) {
+        validationErrors.push('Missing or invalid suggestions structure');
+      }
+
+      if (validationErrors.length > 0) {
+        defaultResponse.summary = `Response validation failed: ${validationErrors.join(', ')}`;
+
+        return defaultResponse;
       }
 
       const { issues, summary, approvalRecommended, suggestions } = result;
@@ -165,12 +181,12 @@ ${content}`;
         usageMetadata: text.usage,
       };
     } catch (error) {
-      return {
+      const errorResponse = {
         issues: {
           security: [],
           performance: []
         },
-        summary: text.content.slice(0, 500),
+        summary: `Error parsing LLM response: ${error instanceof Error ? error.message : 'Unknown error'}`,
         approvalRecommended: false,
         suggestions: {
           critical: [],
@@ -178,6 +194,8 @@ ${content}`;
         },
         usageMetadata: text.usage
       };
+
+      return errorResponse;
     }
   }
 
