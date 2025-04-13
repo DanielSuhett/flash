@@ -139,7 +139,7 @@ export class WorkflowService {
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
     const sections = [];
 
-    if (reviewResult.suggestions?.critical.length > 0) {
+    if (reviewResult.suggestions?.critical?.length > 0) {
       sections.push(
         '## Critical Issues 🚨\n\n' +
           reviewResult.suggestions.critical
@@ -151,9 +151,9 @@ export class WorkflowService {
       );
     }
 
-    if (reviewResult.suggestions?.important.length > 0) {
+    if (reviewResult.suggestions?.important?.length > 0) {
       sections.push(
-        '## Important Improvements ⚠️\n\n' +
+        '## Important Improvements ⚠️\n\n' +  
           reviewResult.suggestions.important
             .map(
               (suggestion) =>
@@ -163,31 +163,31 @@ export class WorkflowService {
       );
     }
 
-    return sections.length > 0 ? sections.join('\n\n') : '';
+    return sections?.length > 0 ? sections.join('\n\n') : '';
   }
 
   private buildIssuesSection(reviewResult: CodeReviewResponse): string {
-    if (!reviewResult.issues || Object.keys(reviewResult.issues).length === 0) {
+    if (!reviewResult.issues || Object.keys(reviewResult?.issues)?.length === 0) {
       return '';
     }
 
     const sections = [];
 
-    if (reviewResult.issues?.security && reviewResult.issues?.security.length > 0) {
+    if (reviewResult.issues?.security && reviewResult.issues?.security?.length > 0) {
       sections.push(
         '## Security Issues 🔒\n\n' +
           reviewResult.issues.security.map((issue) => `- ${issue}`).join('\n')
       );
     }
 
-    if (reviewResult.issues?.performance && reviewResult.issues?.performance.length > 0) {
+    if (reviewResult.issues?.performance && reviewResult.issues?.performance?.length > 0) {
       sections.push(
         '## Performance Issues ⚡\n\n' +
           reviewResult.issues.performance.map((issue) => `- ${issue}`).join('\n')
       );
     }
 
-    return sections.length > 0 ? sections.join('\n\n') : '';
+    return sections?.length > 0 ? sections.join('\n\n') : '';
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResponse): string {
