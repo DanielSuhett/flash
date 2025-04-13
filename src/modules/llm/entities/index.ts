@@ -26,6 +26,13 @@ export interface GeminiResponse {
   };
 }
 
+export interface CodeReviewMetrics {
+  complexity: number;
+  maintainability: number;
+  securityScore: number;
+  performanceScore: number;
+}
+
 export interface CodeReviewIssues {
   security: string[];
   performance: string[];
@@ -57,11 +64,14 @@ export interface CodeReviewSuggestion {
 export interface CodeReviewSuggestions {
   critical: CodeReviewSuggestion[];
   important: CodeReviewSuggestion[];
+  minor: CodeReviewSuggestion[];
 }
 
 export interface CodeReviewResponse {
+  metrics: CodeReviewMetrics;
   issues: CodeReviewIssues;
   summary: string;
+  overallQuality: number;
   approvalRecommended: boolean;
   suggestions: CodeReviewSuggestions;
   usageMetadata: TokenUsage;

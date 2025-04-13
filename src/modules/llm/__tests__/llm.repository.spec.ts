@@ -41,7 +41,7 @@ describe('LlmRepository', () => {
 
     mockFetch.mockResolvedValueOnce(mockResponse);
 
-    const result = await repository.generateContent([{ text: prompt }]);
+    const result = await repository.generateContent(prompt);
 
     const expectedEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${mockConfig.model}:generateContent`;
 
@@ -87,7 +87,7 @@ describe('LlmRepository', () => {
 
     mockFetch.mockResolvedValueOnce(mockResponse);
 
-    await expect(repository.generateContent([{ text: prompt }])).rejects.toThrow(
+    await expect(repository.generateContent(prompt)).rejects.toThrow(
       'API request failed: 400 Bad Request'
     );
   });

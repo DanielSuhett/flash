@@ -80,22 +80,30 @@ describe('LlmService', () => {
       };
 
       const mockReviewResult: CodeReviewResponse = {
+        metrics: {
+          complexity: 5,
+          maintainability: 5,
+          securityScore: 5,
+          performanceScore: 5
+        },
         issues: {
           security: [],
-          performance: [],
+          performance: []
         },
         summary: 'test summary',
+        overallQuality: 8,
         approvalRecommended: true,
         suggestions: {
           critical: [],
           important: [],
+          minor: []
         },
         usageMetadata: {
           model: 'test-model',
           promptTokens: 10,
           completionTokens: 20,
-          totalTokens: 30,
-        },
+          totalTokens: 30
+        }
       };
 
       (LlmMapper.buildReviewPrompt as jest.Mock).mockReturnValue('test prompt');
@@ -104,7 +112,11 @@ describe('LlmService', () => {
 
       const result = await service.reviewCode(mockIndexedCodebase, mockPullRequest, 'backend');
 
-      expect(LlmMapper.buildReviewPrompt).toHaveBeenCalledWith(mockIndexedCodebase, mockPullRequest, 'backend');
+      expect(LlmMapper.buildReviewPrompt).toHaveBeenCalledWith(
+        mockIndexedCodebase,
+        mockPullRequest,
+        'backend'
+      );
       expect(LlmRepository.prototype.generateContent).toHaveBeenCalledWith('test prompt');
       expect(result).toEqual(mockReviewResult);
     });
@@ -137,22 +149,30 @@ describe('LlmService', () => {
     };
 
     const mockReviewResult: CodeReviewResponse = {
+      metrics: {
+        complexity: 5,
+        maintainability: 5,
+        securityScore: 5,
+        performanceScore: 5
+      },
       issues: {
         security: [],
-        performance: [],
+        performance: []
       },
       summary: 'test summary',
+      overallQuality: 8,
       approvalRecommended: true,
       suggestions: {
         critical: [],
         important: [],
+        minor: []
       },
       usageMetadata: {
         model: 'test-model',
         promptTokens: 10,
         completionTokens: 20,
-        totalTokens: 30,
-      },
+        totalTokens: 30
+      }
     };
 
     it('should orchestrate code review process', async () => {
@@ -173,7 +193,11 @@ describe('LlmService', () => {
 
       const result = await service.reviewCode(mockIndexedCodebase, mockPullRequest, 'backend');
 
-      expect(LlmMapper.buildReviewPrompt).toHaveBeenCalledWith(mockIndexedCodebase, mockPullRequest, 'backend');
+      expect(LlmMapper.buildReviewPrompt).toHaveBeenCalledWith(
+        mockIndexedCodebase,
+        mockPullRequest,
+        'backend'
+      );
       expect(LlmRepository.prototype.generateContent).toHaveBeenCalledWith(mockPrompt);
       expect(LlmMapper.parseReviewResponse).toHaveBeenCalledWith(mockResponse);
       expect(result).toEqual(mockReviewResult);

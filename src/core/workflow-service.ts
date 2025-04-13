@@ -87,7 +87,12 @@ export class WorkflowService {
   }
 
   private shouldAutoApprove(reviewResult: CodeReviewResponse): boolean {
-    return reviewResult.approvalRecommended;
+    return (
+      reviewResult.metrics.complexity <= 7 &&
+      reviewResult.metrics.maintainability >= 6 &&
+      reviewResult.metrics.securityScore >= 8 &&
+      reviewResult.metrics.performanceScore >= 8
+    );
   }
 
   private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {
@@ -97,7 +102,7 @@ export class WorkflowService {
       comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
     }
 
-    const event = reviewResult.approvalRecommended ? 'APPROVE' : 'REQUEST_CHANGES';
+    const event = reviewResult.overallQuality >= this.config.review.qualityThreshold ? 'APPROVE' : 'REQUEST_CHANGES';
 
     await this.githubService.createReview(
       pullRequest.owner,
@@ -115,17 +120,28 @@ export class WorkflowService {
 
   private buildReviewComment(reviewResult: CodeReviewResponse): string {
     const summary = this.buildSummarySection(reviewResult);
+    const metrics = this.buildMetricsSection(reviewResult);
     const suggestions = this.buildSuggestionsSection(reviewResult);
     const issues = this.buildIssuesSection(reviewResult);
     const approval = this.buildApprovalSection(reviewResult);
     const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${metrics}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    return `# Code Review Summary\n\n${reviewResult.summary}\n\n**`;
+    const qualityEmoji = reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
+
+    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/10**`;
+  }
+
+  private buildMetricsSection(reviewResult: CodeReviewResponse): string {
+    return `## Code Metrics
+- Complexity: ${reviewResult.metrics.complexity}/10
+- Maintainability: ${reviewResult.metrics.maintainability}/10
+- Security: ${reviewResult.metrics.securityScore}/10
+- Performance: ${reviewResult.metrics.performanceScore}/10`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
@@ -147,6 +163,18 @@ export class WorkflowService {
       sections.push(
         '## Important Improvements ⚠️\n' +
           reviewResult.suggestions.important
+            .map(
+              (suggestion) =>
+                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
+            )
+            .join('\n')
+      );
+    }
+
+    if (reviewResult.suggestions.minor.length > 0) {
+      sections.push(
+        '## Minor Suggestions 💡\n' +
+          reviewResult.suggestions.minor
             .map(
               (suggestion) =>
                 `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
@@ -177,11 +205,12 @@ export class WorkflowService {
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResponse): string {
-    const isApproved = reviewResult.approvalRecommended;
+    const approvalThreshold = this.config.review.qualityThreshold;
+    const isApproved = reviewResult.overallQuality >= approvalThreshold;
     const emoji = isApproved ? '✅' : '❌';
     const status = isApproved ? 'Approved' : 'Changes Requested';
 
-    return `## Review Status\n\n${emoji} **${status}**`;
+    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/10`;
   }
 
   private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {

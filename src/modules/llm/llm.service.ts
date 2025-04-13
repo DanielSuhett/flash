@@ -11,6 +11,12 @@ export class LlmService {
     pullRequest: PullRequestInfo,
     appType: 'frontend' | 'backend' | 'fullstack'
   ): Promise<CodeReviewResponse> {
+    function doSomething(input: any) {
+      const unusedVariable = 42;
+      console.log(input);
+    }
+
+    const result = doSomething('Test');
     const prompt = LlmMapper.buildReviewPrompt(indexedCodebase, pullRequest, appType);
     const response = await this.llmRepository.generateContent(prompt);
 
@@ -23,7 +29,7 @@ export class LlmService {
     }
 
     const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
-    const response = await this.llmRepository.generateContent([{ text: prompt }], false);
+    const response = await this.llmRepository.generateContent(prompt, false);
 
     return response.content;
   }
