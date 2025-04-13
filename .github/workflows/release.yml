@@ -2,17 +2,19 @@ name: Release Action
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     container:
       image: node:20-bullseye
       options: --user root
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Install pnpm
         run: |
@@ -37,18 +39,42 @@ jobs:
           test -f dist/index.js
           test -f dist/index.js.map
 
-      - name: Prepare release files
+      - name: Configure Git
         run: |
-          cp dist/index.js .
-          cp dist/index.js.map .
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Release
+      - name: Bump version and create tag
+        id: bump_version
+        uses: anothrNick/github-tag-action@1.71.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.bump_version.outputs.new_tag }} --no-git-tag-version
+          git add package.json
+
+      - name: Force add dist directory
+        run: |
+          git add -f dist/
+          git commit -m "chore: bump version to ${{ steps.bump_version.outputs.new_tag }} and update dist files"
+
+      - name: Push changes
+        run: |
+          git push
+          git push --tags
+
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            index.js
-            index.js.map
+            dist/index.js
+            dist/index.js.map
             action.yml
           generate_release_notes: true
+          tag_name: ${{ steps.bump_version.outputs.new_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
