@@ -38337,7 +38337,19 @@ Review Focus:
 5. Pay attention to the following aspects relevant to a ${appType ?? 'fullstack'} application
 6. If a problem is not directly related to the diff in PR, ignore it
 7. If no issues are found, return an empty array for the issues field
-8. Never accept some critical issues when determining if the PR should be approved
+8. Pay special attention to:
+     - Undefined function references
+     - Missing function implementations
+     - Inconsistent function usage
+     - Unused variables or functions
+     - Type mismatches
+     - Runtime errors
+     - Missing imports
+     - Circular dependencies
+9. Flag any function that is referenced but not defined as a critical issue
+10. Flag any function that is defined but not used as an important issue
+11. Flag any type mismatches or potential runtime errors as critical issues
+12. Reject any PR that contains critical issues - these must be fixed before approval
 `,
             },
             {
