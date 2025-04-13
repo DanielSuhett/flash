@@ -154,7 +154,8 @@ ${content}`;
         !Array.isArray(result.issues.performance) ||
         typeof result.approvalRecommended !== 'boolean' ||
         !Array.isArray(result.suggestions.critical) ||
-        !Array.isArray(result.suggestions.important)
+        !Array.isArray(result.suggestions.important) ||
+        result.summary.length > 0 
       ) {
         return {
           issues: {
