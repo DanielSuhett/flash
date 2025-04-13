@@ -14,7 +14,7 @@ export class LlmRepository {
       throw new Error('Gemini API key is required');
     }
 
-    const model = this.config?.model || 'gemini-2.0-flash';
+    const model = this.config.model;
     const endpoint = this.mapper.buildGeminiEndpoint(model);
     const response = await this.executeRequest(endpoint, prompt, returnJSON);
 

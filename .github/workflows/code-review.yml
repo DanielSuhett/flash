@@ -47,4 +47,3 @@ jobs:
           index-cache-enabled: true
           pr-number: ${{ github.event.inputs.pr-number }}
           output-language: en
-          quality-threshold: 7

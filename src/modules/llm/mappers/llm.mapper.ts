@@ -43,31 +43,38 @@ Review Focus:
 7. If no issues are found, return an empty array for the issues field
 8. Never accept some critical issues when determining if the PR should be approved
 
+IMPORTANT: Return ONLY a valid JSON object with this exact structure, 
+without any markdown formatting, code blocks, or additional text.
 REQUIRED RESPONSE FORMAT:
 {
   "issues": {
-    "security": [], // Array of security issues or empty array
-    "performance": [] // Array of performance issues or empty array
+    "security": string[],
+    "performance": string[]
   },
-  "summary": "Brief summary of the changes and their impact",
-  "approvalRecommended": true, // boolean indicating if PR should be approved
+  "summary": string,
+  "approvalRecommended": boolean,
   "suggestions": {
     "critical": [
       {
-        "category": "security",
-        "file": "src/auth/auth.service.ts",
-        "location": "line 45",
-        "description": "Password hash should use a stronger algorithm"
+        "category": string,
+        "file": string,
+        "location": string,
+        "description": string
       }
     ],
     "important": [
       {
-        "category": "performance",
-        "file": "src/user/user.service.ts",
-        "location": "line 23",
-        "description": "Consider adding an index to improve query performance"
+        "category": string,
+        "file": string,
+        "location": string,
+        "description": string
       }
     ]
+  },
+  "usageMetadata": {
+    "promptTokenCount": number,
+    "candidatesTokenCount": number,
+    "totalTokenCount": number
   }
 }`;
   }
