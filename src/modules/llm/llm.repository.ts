@@ -35,7 +35,7 @@ export class LlmRepository {
     return this.mapper.mapGeminiResponse(data, model);
   }
 
-  private async executeRequest(endpoint: string, prompt: Array<{ text: string }>, returnJSON: boolean = true): Promise<Response> {
+  private async executeRequest(endpoint: string, prompt: Array<{ text: string }>, returnJSON = true): Promise<Response> {
     const systemInstruction = this.mapper.getSystemInstruction();
 
     return fetch(endpoint, {
