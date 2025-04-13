@@ -59,11 +59,6 @@ export class WorkflowService {
       core.info('Posting review results...');
       await this.postReviewComment(prWithContents, reviewResult);
 
-      if (this.config.review.autoApprove && reviewResult.approvalRecommended && this.shouldAutoApprove(reviewResult)) {
-        core.info('Auto-approval is enabled and recommended. Processing...');
-        await this.approveAndMergePR(prWithContents);
-      }
-
       core.info('Code review completed successfully');
     } catch (error) {
       core.error(`Error during review process: ${error}`);
@@ -87,12 +82,7 @@ export class WorkflowService {
   }
 
   private shouldAutoApprove(reviewResult: CodeReviewResponse): boolean {
-    return (
-      reviewResult.metrics.complexity <= 7 &&
-      reviewResult.metrics.maintainability >= 6 &&
-      reviewResult.metrics.securityScore >= 8 &&
-      reviewResult.metrics.performanceScore >= 8
-    );
+    return reviewResult.approvalRecommended;
   }
 
   private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {
@@ -102,7 +92,7 @@ export class WorkflowService {
       comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
     }
 
-    const event = reviewResult.overallQuality >= this.config.review.qualityThreshold ? 'APPROVE' : 'REQUEST_CHANGES';
+    const event = reviewResult.approvalRecommended ? 'APPROVE' : 'REQUEST_CHANGES';
 
     await this.githubService.createReview(
       pullRequest.owner,
@@ -112,36 +102,21 @@ export class WorkflowService {
       comment,
       event
     );
-
-    if (event === 'APPROVE' && this.config.review.autoMerge) {
-      await this.githubService.mergePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
-    }
   }
 
   private buildReviewComment(reviewResult: CodeReviewResponse): string {
     const summary = this.buildSummarySection(reviewResult);
-    const metrics = this.buildMetricsSection(reviewResult);
     const suggestions = this.buildSuggestionsSection(reviewResult);
     const issues = this.buildIssuesSection(reviewResult);
     const approval = this.buildApprovalSection(reviewResult);
     const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${metrics}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    const qualityEmoji = reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
-
-    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/10**`;
-  }
-
-  private buildMetricsSection(reviewResult: CodeReviewResponse): string {
-    return `## Code Metrics
-- Complexity: ${reviewResult.metrics.complexity}/10
-- Maintainability: ${reviewResult.metrics.maintainability}/10
-- Security: ${reviewResult.metrics.securityScore}/10
-- Performance: ${reviewResult.metrics.performanceScore}/10`;
+    return `# Code Review Summary\n\n${reviewResult.summary}\n\n**`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
@@ -163,18 +138,6 @@ export class WorkflowService {
       sections.push(
         '## Important Improvements ⚠️\n' +
           reviewResult.suggestions.important
-            .map(
-              (suggestion) =>
-                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
-            )
-            .join('\n')
-      );
-    }
-
-    if (reviewResult.suggestions.minor.length > 0) {
-      sections.push(
-        '## Minor Suggestions 💡\n' +
-          reviewResult.suggestions.minor
             .map(
               (suggestion) =>
                 `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
@@ -205,12 +168,11 @@ export class WorkflowService {
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResponse): string {
-    const approvalThreshold = this.config.review.qualityThreshold;
-    const isApproved = reviewResult.overallQuality >= approvalThreshold;
+    const isApproved = reviewResult.approvalRecommended;
     const emoji = isApproved ? '✅' : '❌';
     const status = isApproved ? 'Approved' : 'Changes Requested';
 
-    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/10`;
+    return `## Review Status\n\n${emoji} **${status}**`;
   }
 
   private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {
@@ -223,13 +185,5 @@ export class WorkflowService {
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
 | ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
-  }
-
-  private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {
-    await this.githubService.approvePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
-
-    if (this.config.review.autoMerge) {
-      await this.githubService.mergePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
-    }
   }
 }

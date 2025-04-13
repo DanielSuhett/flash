@@ -24,10 +24,6 @@ inputs:
     description: 'Whether to automatically approve PRs based on analysis'
     required: false
     default: 'false'
-  auto-merge:
-    description: 'Whether to automatically merge approved PRs'
-    required: false
-    default: 'false'
   index-cache-enabled:
     description: 'Whether to cache the indexed codebase between runs'
     required: false

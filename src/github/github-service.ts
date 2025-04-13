@@ -254,28 +254,6 @@ export class GitHubService {
       body: 'Automatically approved based on code review results.',
     });
   }
-
-  async mergePullRequest(owner: string, repo: string, prNumber: number): Promise<boolean> {
-    try {
-      await this.octokit.pulls.merge({
-        owner,
-        repo,
-        pull_number: prNumber,
-        merge_method: 'merge',
-      });
-
-      return true;
-    } catch (error) {
-      await this.createComment(
-        owner,
-        repo,
-        prNumber,
-        '⚠️ PR was approved but could not be automatically merged. Please resolve any conflicts and merge manually.'
-      );
-
-      return false;
-    }
-  }
 }
 
 interface RepoItem {

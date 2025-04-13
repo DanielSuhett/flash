@@ -100,18 +100,11 @@ describe('LlmMapper', () => {
     it('should parse valid review response', () => {
       const response = `
         {
-          "metrics": {
-            "complexity": 5,
-            "maintainability": 7,
-            "securityScore": 8,
-            "performanceScore": 6
-          },
           "issues": {
             "security": ["test security issue"],
             "performance": ["test performance issue"]
           },
           "summary": "Test summary",
-          "overallQuality": 8,
           "approvalRecommended": true,
           "suggestions": {
             "critical": [],
@@ -137,23 +130,15 @@ describe('LlmMapper', () => {
       });
 
       expect(result).toEqual({
-        metrics: {
-          complexity: 5,
-          maintainability: 7,
-          securityScore: 8,
-          performanceScore: 6
-        },
-        issues: {
+          issues: {
           security: ["test security issue"],
           performance: ["test performance issue"]
         },
         summary: "Test summary",
-        overallQuality: 8,
         approvalRecommended: true,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',
@@ -177,23 +162,15 @@ describe('LlmMapper', () => {
       });
 
       expect(result).toEqual({
-        metrics: {
-          complexity: 5,
-          maintainability: 5,
-          securityScore: 5,
-          performanceScore: 5
-        },
         issues: {
           security: [],
           performance: []
         },
         summary: response.slice(0, 500),
-        overallQuality: 5,
         approvalRecommended: false,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',
@@ -217,23 +194,15 @@ describe('LlmMapper', () => {
       });
 
       expect(result).toEqual({
-        metrics: {
-          complexity: 5,
-          maintainability: 5,
-          securityScore: 5,
-          performanceScore: 5
-        },
         issues: {
           security: [],
           performance: []
         },
         summary: response.slice(0, 500),
-        overallQuality: 5,
         approvalRecommended: false,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',

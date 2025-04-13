@@ -46,7 +46,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           llm-api-key: ${{ secrets.LLM_API_KEY }}
           auto-approve: 'false'
-          auto-merge: 'false'
           index-cache-enabled: 'true'
 ```
 
@@ -58,7 +57,6 @@ jobs:
 | `llm-api-key` | API key for Google Gemini | Yes | N/A |
 | `llm-model` | Gemini model to use | No | `gemini-2.0-flash` |
 | `auto-approve` | Whether to automatically approve PRs based on Gemini analysis | No | `false` |
-| `auto-merge` | Whether to automatically merge approved PRs | No | `false` |
 | `index-cache-enabled` | Whether to cache the indexed codebase between runs | No | `true` |
 | `pr-number` | PR number (for manual triggering) | No | N/A |
 
