@@ -121,14 +121,19 @@ export class WorkflowService {
     const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return [summary, suggestions, approval, issues, tokenUsage]
+    const sections = [summary, approval, tokenUsage];
+    
+    if (suggestions) sections.push(suggestions);
+    if (issues) sections.push(issues);
+
+    return sections
       .filter(Boolean)
       .join('\n\n')
       .concat(watermark);
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    return `# Code Review Summary\n\n${reviewResult.summary}\n`;
+    return `# Code Review Summary\n\n${reviewResult.summary}`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
@@ -162,27 +167,32 @@ export class WorkflowService {
   }
 
   private buildIssuesSection(reviewResult: CodeReviewResponse): string {
+    if (!reviewResult.issues || Object.keys(reviewResult.issues).length === 0) {
+      return '';
+    }
+
     const sections = [];
 
-    if (reviewResult.issues.security.length > 0) {
+    if (reviewResult.issues.security && reviewResult.issues.security.length > 0) {
       sections.push(
-        `## Security Issues\n${reviewResult.issues.security.map((issue: string) => `- ${issue}`).join('\n')}`
+        '## Security Issues 🔒\n\n' +
+          reviewResult.issues.security.map((issue) => `- ${issue}`).join('\n')
       );
     }
 
-    if (reviewResult.issues.performance.length > 0) {
+    if (reviewResult.issues.performance && reviewResult.issues.performance.length > 0) {
       sections.push(
-        `## Performance Issues\n${reviewResult.issues.performance.map((issue: string) => `- ${issue}`).join('\n')}`
+        '## Performance Issues ⚡\n\n' +
+          reviewResult.issues.performance.map((issue) => `- ${issue}`).join('\n')
       );
     }
 
-    return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
+    return sections.length > 0 ? sections.join('\n\n') : '';
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResponse): string {
     const emoji = reviewResult.approvalRecommended ? '✅' : '❌';
     const status = reviewResult.approvalRecommended ? 'Approved' : 'Changes Requested';
-
     return `## Review Status\n\n${emoji} **${status}**`;
   }
 
@@ -191,11 +201,7 @@ export class WorkflowService {
       return '';
     }
 
-    return `## Token Usage
-
-| Model | Prompt Tokens | Completion Tokens | Total Tokens |
-|-------|--------------|-------------------|--------------|
-| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
+    return `## Token Usage\n\n| Model | Prompt Tokens | Completion Tokens | Total Tokens |\n|-------|--------------|-------------------|--------------|\n| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
   }
 
   private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {
