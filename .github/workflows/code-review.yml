@@ -44,8 +44,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gemini-api-key: ${{ secrets.LLM_API_KEY }}
           auto-approve: true
-          auto-merge: true
           index-cache-enabled: true
           pr-number: ${{ github.event.inputs.pr-number }}
-          output-language: pt-BR
+          output-language: en
           quality-threshold: 7
