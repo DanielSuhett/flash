@@ -11,9 +11,15 @@ export class LlmMapper {
     const prSummary = this.buildPRSummary(pullRequest);
 
     return `
-You have 10 years of experience in developing and reviewing large-scale TypeScript applications. You prioritize type safety, performance, and long-term maintainability. 
-You are familiar with common TypeScript best practices and design patterns. 
-You are specializing in web application development. Your task is to analyze Pull Request changes meticulously:
+You are an expert code reviewer with 10 years of experience in developing and reviewing large-scale applications.
+You specialize in web application development and your task is to analyze Pull Request changes.
+
+SYSTEM INSTRUCTIONS:
+1. You MUST respond with ONLY a valid JSON object
+2. Do not include any markdown formatting, code blocks, or additional text
+3. The response must strictly follow the provided schema
+4. If no issues are found, return empty arrays for the issues fields
+5. Never accept critical issues when determining if the PR should be approved
 
 Here's a summary of the PR changes:
 ${prSummary}
@@ -22,47 +28,31 @@ Here's a summary of the codebase structure:
 ${codebaseSummary}
 
 Review Focus:
-In addition to general TypeScript best practices (type-safety, performance, maintainability, readability), 
-please pay special attention to the following aspects relevant to a ${appType ?? 'fullstack'} application:
-
-Please provide a detailed code review with the following structure:
 1. A summary of the changes and their impact
-2. Code quality metrics:
-   - Complexity score (0-10)
-   - Maintainability score (0-10)
-   - Security score (0-10)
-   - Performance score (0-10)
-3. A quality score from 0-10 (not 0-100)
-4. A recommendation to approve or request changes
-5. Organized suggestions by category:
-   - Critical issues that must be fixed
-   - Important improvements recommended
-   - Minor suggestions for better code quality
+2. A recommendation to approve or request changes
+3. If problem is not related to the PR, suggest but don't put in review criteria
+4. Organized suggestions by category, focusing on problems that need to be addressed:
+   - Critical issues that must be fixed (bugs, potential errors, security vulnerabilities)
+   - Important improvements related to preventing future bugs or improving code robustness
    Each suggestion should include:
-   - Category (type-safety, performance, maintainability, etc.)
+   - Category (e.g., 'bug', 'type-safety', 'performance', 'security')
    - File location (file path and line numbers)
    - Clear explanation of the issue and how to fix it
    - Exclude documentation and comment expectations from review criteria
-
-6. List any security or performance issues identified
-7. Identify both critical errors that must be fixed and minor suggestions for improvement
-8. If problem is not related to the PR, suggest but don't put in review criteria
+5. Pay attention to the following aspects relevant to a ${appType ?? 'fullstack'} application
+6. If a problem is not directly related to the diff in PR, ignore it
+7. If no issues are found, return an empty array for the issues field
+8. Never accept some critical issues when determining if the PR should be approved
 
 IMPORTANT: Return ONLY a valid JSON object with this exact structure, 
-without any markdown formatting, code blocks, or additional text:
+without any markdown formatting, code blocks, or additional text.
+REQUIRED RESPONSE FORMAT:
 {
-  "metrics": {
-    "complexity": number,
-    "maintainability": number,
-    "securityScore": number,
-    "performanceScore": number
-  },
   "issues": {
     "security": string[],
     "performance": string[]
   },
   "summary": string,
-  "overallQuality": number,
   "approvalRecommended": boolean,
   "suggestions": {
     "critical": [
@@ -74,14 +64,6 @@ without any markdown formatting, code blocks, or additional text:
       }
     ],
     "important": [
-      {
-        "category": string,
-        "file": string,
-        "location": string,
-        "description": string
-      }
-    ],
-    "minor": [
       {
         "category": string,
         "file": string,
@@ -162,73 +144,48 @@ ${content}`;
 
       if (
         !result.summary ||
-        !result.metrics ||
-        typeof result.metrics.complexity !== 'number' ||
-        typeof result.metrics.maintainability !== 'number' ||
-        typeof result.metrics.securityScore !== 'number' ||
-        typeof result.metrics.performanceScore !== 'number' ||
         !result.issues ||
         !Array.isArray(result.issues.security) ||
         !Array.isArray(result.issues.performance) ||
-        typeof result.overallQuality !== 'number' ||
         typeof result.approvalRecommended !== 'boolean' ||
         !Array.isArray(result.suggestions.critical) ||
-        !Array.isArray(result.suggestions.important) ||
-        !Array.isArray(result.suggestions.minor)
+        !Array.isArray(result.suggestions.important)
       ) {
         return {
-          metrics: {
-            complexity: 5,
-            maintainability: 5,
-            securityScore: 5,
-            performanceScore: 5
-          },
           issues: {
             security: [],
             performance: []
           },
           summary: text.content.slice(0, 500),
-          overallQuality: 5,
           approvalRecommended: false,
           suggestions: {
             critical: [],
             important: [],
-            minor: []
           },
           usageMetadata: text.usage
         };
       }
 
-      const { metrics, issues, summary, overallQuality, approvalRecommended, suggestions } = result;
+      const { issues, summary, approvalRecommended, suggestions } = result;
 
       return {
-        metrics,
         issues,
         summary,
-        overallQuality,
         approvalRecommended,
         suggestions,
         usageMetadata: text.usage,
       };
     } catch (error) {
       return {
-        metrics: {
-          complexity: 5,
-          maintainability: 5,
-          securityScore: 5,
-          performanceScore: 5
-        },
         issues: {
           security: [],
           performance: []
         },
         summary: text.content.slice(0, 500),
-        overallQuality: 5,
         approvalRecommended: false,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: text.usage
       };
