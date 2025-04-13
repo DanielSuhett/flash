@@ -59,11 +59,6 @@ export class WorkflowService {
       core.info('Posting review results...');
       await this.postReviewComment(prWithContents, reviewResult);
 
-      if (this.config.review.autoApprove && reviewResult.approvalRecommended && this.shouldAutoApprove(reviewResult)) {
-        core.info('Auto-approval is enabled and recommended. Processing...');
-        await this.approveAndMergePR(prWithContents);
-      }
-
       core.info('Code review completed successfully');
     } catch (error) {
       core.error(`Error during review process: ${error}`);
@@ -107,10 +102,6 @@ export class WorkflowService {
       comment,
       event
     );
-
-    if (event === 'APPROVE' && this.config.review.autoMerge) {
-      await this.githubService.mergePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
-    }
   }
 
   private buildReviewComment(reviewResult: CodeReviewResponse): string {
@@ -194,13 +185,5 @@ export class WorkflowService {
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
 | ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
-  }
-
-  private async approveAndMergePR(pullRequest: PullRequestInfo): Promise<void> {
-    await this.githubService.approvePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
-
-    if (this.config.review.autoMerge) {
-      await this.githubService.mergePullRequest(pullRequest.owner, pullRequest.repo, pullRequest.prNumber);
-    }
   }
 }

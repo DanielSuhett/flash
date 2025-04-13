@@ -12,7 +12,6 @@ export function getActionConfig(): ActionConfig {
     },
     review: {
       autoApprove: core.getBooleanInput('auto-approve', { required: false }),
-      autoMerge: core.getBooleanInput('auto-merge', { required: false }),
       qualityThreshold: Number(core.getInput('quality-threshold', { required: false })) || 7,
     },
     index: {
