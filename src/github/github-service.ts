@@ -222,7 +222,7 @@ export class GitHubService {
           {
             path: comment.path,
             position,
-            body: comment.body,
+            body: comment.body.replace(/\r\n/g, '\n'),
           },
         ];
       }
@@ -239,7 +239,7 @@ export class GitHubService {
       repo,
       pull_number: prNumber,
       commit_id,
-      body,
+      body: body.replace(/\r\n/g, '\n'),
       event,
       comments: validComments,
     });

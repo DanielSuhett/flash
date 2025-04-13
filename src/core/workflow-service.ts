@@ -121,7 +121,10 @@ export class WorkflowService {
     const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
 
-    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+    return [summary, suggestions, approval, issues, tokenUsage]
+      .filter(Boolean)
+      .join('\n\n')
+      .concat(watermark);
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
@@ -133,25 +136,25 @@ export class WorkflowService {
 
     if (reviewResult.suggestions.critical.length > 0) {
       sections.push(
-        '## Critical Issues 🚨\n' +
+        '## Critical Issues 🚨\n\n' +
           reviewResult.suggestions.critical
             .map(
               (suggestion) =>
                 `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
             )
-            .join('\n')
+            .join('\n\n')
       );
     }
 
     if (reviewResult.suggestions.important.length > 0) {
       sections.push(
-        '## Important Improvements ⚠️\n' +
+        '## Important Improvements ⚠️\n\n' +
           reviewResult.suggestions.important
             .map(
               (suggestion) =>
                 `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
             )
-            .join('\n')
+            .join('\n\n')
       );
     }
 
