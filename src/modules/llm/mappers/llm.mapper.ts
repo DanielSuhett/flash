@@ -2,31 +2,60 @@ import { IndexedCodebase, PullRequestInfo } from '../../../types/index.js';
 import { CodeReviewResponse, GeminiResponse, LlmResponse } from '../entities/index.js';
 
 export class LlmMapper {
+  static getSystemInstruction(): string {
+    return `You are an expert code reviewer with 10 years of experience in developing 
+    and reviewing large-scale applications. You specialize in web application development.
+  
+  SYSTEM INSTRUCTIONS:
+  1. You MUST respond with ONLY a valid JSON object.
+  2. Do not include any markdown formatting, code blocks, or additional text outside the JSON structure.
+  3. The response must strictly follow the provided schema.
+  4. If no issues are found, return empty arrays for the 'issues' fields and relevant empty arrays within 'suggestions'.
+  5. Never recommend approval if critical issues are found. Base the 'approvalRecommended' boolean on this rule.
+  
+  IMPORTANT: Return ONLY a valid JSON object with this exact structure,
+  without any markdown formatting, code blocks, or additional text.
+  
+  REQUIRED RESPONSE FORMAT:
+  {
+    "issues": {
+      "security": string[],
+      "performance": string[]
+    },
+    "summary": string,
+    "approvalRecommended": boolean,
+    "suggestions": {
+      "critical": [
+        {
+          "category": string,
+          "file": string,
+          "location": string, // e.g., "line 15" or "lines 20-25"
+          "description": string
+        }
+      ],
+      "important": [
+        {
+          "category": string,
+          "file": string,
+          "location": string, // e.g., "line 15" or "lines 20-25"
+          "description": string
+        }
+      ]
+    }
+  }`;
+  }
+
   static buildReviewPrompt(
     indexedCodebase: IndexedCodebase,
     pullRequest: PullRequestInfo,
     appType: 'frontend' | 'backend' | 'fullstack'
-  ): string {
+  ): Array<{ text: string }> {
     const codebaseSummary = this.buildCodebaseSummary(indexedCodebase);
     const prSummary = this.buildPRSummary(pullRequest);
 
-    return `
-You are an expert code reviewer with 10 years of experience in developing and reviewing large-scale applications.
-You specialize in web application development and your task is to analyze Pull Request changes.
-
-SYSTEM INSTRUCTIONS:
-1. You MUST respond with ONLY a valid JSON object
-2. Do not include any markdown formatting, code blocks, or additional text
-3. The response must strictly follow the provided schema
-4. If no issues are found, return empty arrays for the issues fields
-5. Never accept critical issues when determining if the PR should be approved
-
-Here's a summary of the PR changes:
-${prSummary}
-
-Here's a summary of the codebase structure:
-${codebaseSummary}
-
+    return [
+      {
+        text: ` 
 Review Focus:
 1. A summary of the changes and their impact
 2. A recommendation to approve or request changes
@@ -43,41 +72,17 @@ Review Focus:
 6. If a problem is not directly related to the diff in PR, ignore it
 7. If no issues are found, return an empty array for the issues field
 8. Never accept some critical issues when determining if the PR should be approved
-
-IMPORTANT: Return ONLY a valid JSON object with this exact structure, 
-without any markdown formatting, code blocks, or additional text.
-REQUIRED RESPONSE FORMAT:
-{
-  "issues": {
-    "security": string[],
-    "performance": string[]
-  },
-  "summary": string,
-  "approvalRecommended": boolean,
-  "suggestions": {
-    "critical": [
+`,
+      },
       {
-        "category": string,
-        "file": string,
-        "location": string,
-        "description": string
-      }
-    ],
-    "important": [
+        text: `Here's a summary of the PR changes:
+    ${prSummary}`,
+      },
       {
-        "category": string,
-        "file": string,
-        "location": string,
-        "description": string
-      }
-    ]
-  },
-  "usageMetadata": {
-    "promptTokenCount": number,
-    "candidatesTokenCount": number,
-    "totalTokenCount": number
-  }
-}`;
+        text: `Here's a summary of the codebase structure context:
+    ${codebaseSummary}`,
+      },
+    ];
   }
 
   static buildTranslationPrompt(content: string, targetLanguage: string): string {
@@ -154,7 +159,7 @@ ${content}`;
         return {
           issues: {
             security: [],
-            performance: []
+            performance: [],
           },
           summary: text.content.slice(0, 500),
           approvalRecommended: false,
@@ -162,7 +167,7 @@ ${content}`;
             critical: [],
             important: [],
           },
-          usageMetadata: text.usage
+          usageMetadata: text.usage,
         };
       }
 
@@ -179,7 +184,7 @@ ${content}`;
       return {
         issues: {
           security: [],
-          performance: []
+          performance: [],
         },
         summary: text.content.slice(0, 500),
         approvalRecommended: false,
@@ -187,7 +192,7 @@ ${content}`;
           critical: [],
           important: [],
         },
-        usageMetadata: text.usage
+        usageMetadata: text.usage,
       };
     }
   }

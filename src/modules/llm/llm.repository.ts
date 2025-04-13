@@ -7,7 +7,7 @@ export class LlmRepository {
 
   private mapper = LlmMapper;
 
-  async generateContent(prompt: string, returnJSON: boolean = true): Promise<LlmResponse> {
+  async generateContent(prompt: Array<{ text: string }>, returnJSON: boolean = true): Promise<LlmResponse> {
     core.info('Starting Gemini Service');
 
     if (!this.config?.apiKey) {
@@ -35,7 +35,9 @@ export class LlmRepository {
     return this.mapper.mapGeminiResponse(data, model);
   }
 
-  private async executeRequest(endpoint: string, prompt: string, returnJSON: boolean = true): Promise<Response> {
+  private async executeRequest(endpoint: string, prompt: Array<{ text: string }>, returnJSON: boolean = true): Promise<Response> {
+    const systemInstruction = this.mapper.getSystemInstruction();
+
     return fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -45,8 +47,12 @@ export class LlmRepository {
       body: JSON.stringify({
         contents: [
           {
+            role: 'system',
+            parts: [{ text: systemInstruction }],
+          },
+          {
             role: 'user',
-            parts: [{ text: prompt }],
+            parts: prompt,
           },
         ],
         generation_config: {
