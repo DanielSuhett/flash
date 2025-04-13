@@ -16,6 +16,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Git
+        run: |
+          git config --global --add safe.directory /__w/projectr/projectr
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Install pnpm
         run: |
           npm install -g pnpm@8.15.3
@@ -38,11 +44,6 @@ jobs:
           ls -la dist/
           test -f dist/index.js
           test -f dist/index.js.map
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version and create tag
         id: bump_version
