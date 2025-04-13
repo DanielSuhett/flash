@@ -173,14 +173,14 @@ export class WorkflowService {
 
     const sections = [];
 
-    if (reviewResult.issues.security && reviewResult.issues.security.length > 0) {
+    if (reviewResult.issues?.security && reviewResult.issues?.security.length > 0) {
       sections.push(
         '## Security Issues 🔒\n\n' +
           reviewResult.issues.security.map((issue) => `- ${issue}`).join('\n')
       );
     }
 
-    if (reviewResult.issues.performance && reviewResult.issues.performance.length > 0) {
+    if (reviewResult.issues?.performance && reviewResult.issues?.performance.length > 0) {
       sections.push(
         '## Performance Issues ⚡\n\n' +
           reviewResult.issues.performance.map((issue) => `- ${issue}`).join('\n')

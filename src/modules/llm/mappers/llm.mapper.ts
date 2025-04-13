@@ -156,7 +156,7 @@ ${content}`;
       if (!result.summary || typeof result.summary !== 'string') {
         validationErrors.push('Missing or invalid summary');
       }
-      if (!result.issues || !Array.isArray(result.issues.security) || !Array.isArray(result.issues.performance)) {
+      if (!result.issues) {
         validationErrors.push('Missing or invalid issues structure');
       }
       if (typeof result.approvalRecommended !== 'boolean') {
