@@ -91,12 +91,10 @@ describe('LlmService', () => {
           performance: []
         },
         summary: 'test summary',
-        overallQuality: 8,
         approvalRecommended: true,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',
@@ -160,12 +158,10 @@ describe('LlmService', () => {
         performance: []
       },
       summary: 'test summary',
-      overallQuality: 8,
       approvalRecommended: true,
       suggestions: {
         critical: [],
         important: [],
-        minor: []
       },
       usageMetadata: {
         model: 'test-model',

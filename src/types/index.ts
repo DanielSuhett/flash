@@ -63,7 +63,6 @@ export interface CodeReviewRequest {
 
 export interface CodeReviewResult {
   summary: string;
-  overallQuality: number;
   approvalRecommended: boolean;
   comments: {
     file: string;

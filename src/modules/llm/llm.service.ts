@@ -16,4 +16,15 @@ export class LlmService {
 
     return LlmMapper.parseReviewResponse(response);
   }
+
+  async translateText(content: string, targetLanguage: string): Promise<string> {
+    if (targetLanguage.toLowerCase() === 'en') {
+      return content;
+    }
+
+    const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
+    const response = await this.llmRepository.generateContent(prompt, false);
+
+    return response.content;
+  }
 }

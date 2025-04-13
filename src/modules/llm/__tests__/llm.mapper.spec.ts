@@ -111,12 +111,10 @@ describe('LlmMapper', () => {
             "performance": ["test performance issue"]
           },
           "summary": "Test summary",
-          "overallQuality": 8,
           "approvalRecommended": true,
           "suggestions": {
             "critical": [],
             "important": [],
-            "minor": []
           },
           "usageMetadata": {
             "promptTokenCount": 100,
@@ -148,12 +146,10 @@ describe('LlmMapper', () => {
           performance: ["test performance issue"]
         },
         summary: "Test summary",
-        overallQuality: 8,
         approvalRecommended: true,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',
@@ -188,12 +184,10 @@ describe('LlmMapper', () => {
           performance: []
         },
         summary: response.slice(0, 500),
-        overallQuality: 5,
         approvalRecommended: false,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',
@@ -228,12 +222,10 @@ describe('LlmMapper', () => {
           performance: []
         },
         summary: response.slice(0, 500),
-        overallQuality: 5,
         approvalRecommended: false,
         suggestions: {
           critical: [],
           important: [],
-          minor: []
         },
         usageMetadata: {
           model: 'test-model',

@@ -64,14 +64,12 @@ export interface CodeReviewSuggestion {
 export interface CodeReviewSuggestions {
   critical: CodeReviewSuggestion[];
   important: CodeReviewSuggestion[];
-  minor: CodeReviewSuggestion[];
 }
 
 export interface CodeReviewResponse {
   metrics: CodeReviewMetrics;
   issues: CodeReviewIssues;
   summary: string;
-  overallQuality: number;
   approvalRecommended: boolean;
   suggestions: CodeReviewSuggestions;
   usageMetadata: TokenUsage;

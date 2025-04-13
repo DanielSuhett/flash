@@ -102,7 +102,7 @@ export class WorkflowService {
       comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
     }
 
-    const event = reviewResult.overallQuality >= this.config.review.qualityThreshold ? 'APPROVE' : 'REQUEST_CHANGES';
+    const event = reviewResult.approvalRecommended ? 'APPROVE' : 'REQUEST_CHANGES';
 
     await this.githubService.createReview(
       pullRequest.owner,
@@ -131,9 +131,8 @@ export class WorkflowService {
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    const qualityEmoji = reviewResult.overallQuality >= 8 ? '🟢' : reviewResult.overallQuality >= 5 ? '🟡' : '🔴';
 
-    return `# Code Review Summary\n\n${reviewResult.summary}\n\n## Overall Quality Score\n\n${qualityEmoji} **${reviewResult.overallQuality}/10**`;
+    return `# Code Review Summary\n\n${reviewResult.summary}\n`;
   }
 
   private buildMetricsSection(reviewResult: CodeReviewResponse): string {
@@ -171,18 +170,6 @@ export class WorkflowService {
       );
     }
 
-    if (reviewResult.suggestions.minor.length > 0) {
-      sections.push(
-        '## Minor Suggestions 💡\n' +
-          reviewResult.suggestions.minor
-            .map(
-              (suggestion) =>
-                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
-            )
-            .join('\n')
-      );
-    }
-
     return sections.length > 0 ? sections.join('\n\n') : '';
   }
 
@@ -205,12 +192,10 @@ export class WorkflowService {
   }
 
   private buildApprovalSection(reviewResult: CodeReviewResponse): string {
-    const approvalThreshold = this.config.review.qualityThreshold;
-    const isApproved = reviewResult.overallQuality >= approvalThreshold;
-    const emoji = isApproved ? '✅' : '❌';
-    const status = isApproved ? 'Approved' : 'Changes Requested';
+    const emoji = reviewResult.approvalRecommended ? '✅' : '❌';
+    const status = reviewResult.approvalRecommended ? 'Approved' : 'Changes Requested';
 
-    return `## Review Status\n\n${emoji} **${status}**\n\n> Quality threshold for approval: ${approvalThreshold}/10`;
+    return `## Review Status\n\n${emoji} **${status}**`;
   }
 
   private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {
