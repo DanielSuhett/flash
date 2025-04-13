@@ -13,6 +13,7 @@ export class LlmMapper {
     return `
 You have 10 years of experience in developing and reviewing large-scale applications.
 You are specializing in web application developmentand your task is to analyze Pull Request changes
+Your task is to analyze Pull Request changes meticulously:
 
 Here's a summary of the PR changes:
 ${prSummary}
