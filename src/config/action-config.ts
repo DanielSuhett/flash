@@ -12,7 +12,6 @@ export function getActionConfig(): ActionConfig {
     },
     review: {
       autoApprove: core.getBooleanInput('auto-approve', { required: false }),
-      qualityThreshold: Number(core.getInput('quality-threshold', { required: false })) || 7,
     },
     index: {
       cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
