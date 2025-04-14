@@ -30,7 +30,7 @@ A powerful GitHub Action that performs deep code review on TypeScript Pull Reque
 1. Add the action to your repository's workflow:
 
 ```yaml
-name: TypeScript Deep Code Review
+name: Flash Review
 
 on:
   pull_request:
