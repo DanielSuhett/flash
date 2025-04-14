@@ -84,6 +84,10 @@ Review Focus:
 10. Flag any function that is defined but not used as an important issue
 11. Flag any type mismatches or potential runtime errors as critical issues
 12. Reject any PR that contains critical issues - these must be fixed before approval
+13. Analyze the actual code changes in detail, not just the structure
+14. Consider the context of the changes in relation to the rest of the codebase
+15. Look for potential side effects of the changes
+16. Check for proper error handling and edge cases
 `,
       },
       {
@@ -108,7 +112,6 @@ ${content}`;
 
     for (const file of indexedCodebase.files) {
       summary += `\nFile: ${file.path}\n`;
-
       for (const decl of file.declarations) {
         summary += `  - ${decl.type} ${decl.name}`;
         if (decl.exported) summary += ' (exported)';
@@ -130,6 +133,14 @@ ${content}`;
 
     for (const file of pullRequest.files) {
       summary += `\n${file.filename} (${file.status}, +${file.additions}, -${file.deletions}):\n`;
+      if (file.contents) {
+        summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
+      }
+      summary += `\nChanges in this file:\n`;
+      if (file.patch) {
+        summary += `\`\`\`diff\n${file.patch}\`\`\`\n`;
+      }
+      summary += `\nContent in this file:\n`;
       if (file.contents) {
         summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
       }
