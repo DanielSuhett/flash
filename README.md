@@ -1,25 +1,33 @@
-# TypeScript Deep Code Review GitHub Action
+# Flash ✨
+<div align="center">
 
-A GitHub Action that performs deep code review on Pull Requests for TypeScript applications. This action indexes the entire codebase, leverages Google's Gemini AI to provide insightful feedback beyond basic linting.
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.9.5-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-✓-blue.svg)](https://github.com/features/actions)
 
-## Features
+</div>
 
-- **Full Codebase Indexing**: Analyzes the TypeScript codebase structure to provide context-aware reviews
-- **Gemini-Powered Code Analysis**: Uses Google's Gemini AI to identify potential issues beyond basic linting
-- **Smart Indexing**: Prioritizes files changed in the PR and their dependencies for efficient analysis
-- **Configurable Automation**: Optional auto-approve and auto-merge capabilities based on review results
-- **Detailed Feedback**: Provides structured, actionable feedback with line-specific comments
+A powerful GitHub Action that performs deep code review on TypeScript Pull Requests using Google's Gemini AI. This action provides intelligent, context-aware code analysis and automated review capabilities.
 
-## Setup
+## 🚀 Features
 
-### Prerequisites
+- **Intelligent Code Analysis**: Leverages Google's Gemini AI for deep code understanding
+- **Smart Indexing**: Efficiently indexes and analyzes TypeScript codebases
+- **Context-Aware Reviews**: Considers the broader codebase context for better insights
+- **Automated Workflow**: Seamless integration with GitHub Actions
+- **Configurable Review Process**: Customize review parameters and thresholds
+- **Multi-language Support**: Review comments in multiple languages
+- **Token Usage Tracking**: Monitor and optimize AI token consumption
 
-- A GitHub repository with TypeScript code
-- A Google Gemini API key
+## 📋 Prerequisites
 
-### Usage
+- GitHub repository with TypeScript code
+- Google Gemini API key
 
-Add the following workflow to your repository (e.g., `.github/workflows/code-review.yml`):
+## 🛠️ Installation
+
+1. Add the action to your repository's workflow:
 
 ```yaml
 name: TypeScript Deep Code Review
@@ -41,80 +49,59 @@ jobs:
           fetch-depth: 0
 
       - name: TypeScript Deep Code Review
-        uses: projectr/ts-deep-code-review@v1
+        uses: DanielSuhett/flash@v0.0.9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          llm-api-key: ${{ secrets.LLM_API_KEY }}
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          gemini-model: 'gemini-2.0-flash'
+          llm-max-tokens: 5000
+          output-language: 'en'
           auto-approve: 'false'
           index-cache-enabled: 'true'
 ```
 
-### Inputs
+## ⚙️ Configuration
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `github-token` | GitHub token for API access | Yes | N/A |
-| `llm-api-key` | API key for Google Gemini | Yes | N/A |
-| `llm-model` | Gemini model to use | No | `gemini-2.0-flash` |
-| `auto-approve` | Whether to automatically approve PRs based on Gemini analysis | No | `false` |
-| `index-cache-enabled` | Whether to cache the indexed codebase between runs | No | `true` |
-| `pr-number` | PR number (for manual triggering) | No | N/A |
+| `github-token` | GitHub token for API access | Yes | - |
+| `gemini-api-key` | Google Gemini API key | Yes | - |
+| `gemini-model` | Gemini model version | No | `gemini-2.0-flash` |
+| `llm-max-tokens` | Maximum tokens for review | No | `5000` |
+| `output-language` | Review output language | No | `en` |
+| `auto-approve` | Auto-approve PRs | No | `false` |
+| `index-cache-enabled` | Enable codebase caching | No | `true` |
+| `pr-number` | PR number for manual trigger | No | - |
 
-## How It Works
-
-1. **Smart Indexing**: The action intelligently indexes the TypeScript codebase, prioritizing files changed in the PR and their dependencies
-2. **Deep Analysis**: Gemini analyzes the PR changes in the context of the broader codebase structure
-3. **Feedback**: A detailed review is posted as a comment on the PR, including specific issues and recommendations
-4. **Automation**: If configured and criteria are met, the action can automatically approve and merge the PR
-
-## Customizing the Gemini Prompt
-
-The action constructs a prompt that includes:
-- A condensed representation of the codebase structure
-- The PR changes with diffs
-- Instructions for analysis
-
-You can customize the prompt by modifying `src/llm/llm-service.ts`.
-
-## Development
-
-### Prerequisites
-
-- Node.js 16+
-- npm
+## 🔧 Development
 
 ### Setup
 
 ```bash
-git clone https://github.com/projectr/ts-deep-code-review.git
-cd ts-deep-code-review
-npm install
+git clone https://github.com/projectr/Flash.git
+cd Flash
+pnpm install
 ```
 
 ### Build
 
 ```bash
-npm run build
+pnpm build
 ```
 
-### Test
+### Testing
 
 ```bash
-npm test
+pnpm test
 ```
 
-## Future Enhancements
+### Linting
 
-Planned features for future versions:
-- Jira integration for ticket verification
-- More advanced codebase indexing and analysis
-- Custom rules and guidelines support
-- Enhanced change impact analysis
+```bash
+pnpm lint
+pnpm lint:fix
+```
 
-## License
+## 📝 License
 
-MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,5 +1,5 @@
 {
-  "name": "ts-deep-code-review",
+  "name": "flash",
   "version": "0.0.9",
   "description": "GitHub Action for deep code review of TypeScript Pull Requests with LLM and Jira integration",
   "main": "dist/index.js",
