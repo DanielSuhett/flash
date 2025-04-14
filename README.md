@@ -8,7 +8,7 @@
 
 </div>
 
-A powerful GitHub Action that performs deep code review on TypeScript Pull Requests using Google's Gemini AI. This action provides intelligent, context-aware code analysis and automated review capabilities.
+A powerful GitHub Action that performs flash code review on TypeScript Pull Requests using Google's Gemini AI. This action provides intelligent, context-aware code analysis and automated review capabilities.
 
 ## 🚀 Features
 
@@ -58,7 +58,6 @@ jobs:
           llm-max-tokens: 5000
           output-language: 'en'
           auto-approve: 'false'
-          index-cache-enabled: 'true'
 ```
 
 ### Granting GitHub Actions Permission to Create and Approve PRs
