@@ -19,6 +19,8 @@ A powerful GitHub Action that performs flash code review on TypeScript Pull Requ
 - **Configurable Review Process**: Customize review parameters and thresholds
 - **Multi-language Support**: Review comments in multiple languages
 - **Token Usage Tracking**: Monitor and optimize AI token consumption
+![image](https://github.com/user-attachments/assets/417bd83a-4005-42cf-93f9-b01c44334713)
+
 
 ## 📋 Prerequisites
 
