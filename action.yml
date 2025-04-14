@@ -1,4 +1,4 @@
-name: 'TypeScript Deep Code Review'
+name: 'Flash Code Review'
 description: 'Performs deep code review on TypeScript pull requests using AI'
 author: 'flash'
 inputs:
