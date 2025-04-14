@@ -24,6 +24,7 @@ A powerful GitHub Action that performs deep code review on TypeScript Pull Reque
 
 - GitHub repository with TypeScript code
 - Google Gemini API key
+- Setup actions permissions
 
 ## 🛠️ Installation
 
@@ -59,6 +60,23 @@ jobs:
           auto-approve: 'false'
           index-cache-enabled: 'true'
 ```
+
+### Granting GitHub Actions Permission to Create and Approve PRs
+**Enable repository setting for your workflow to create and approve pull requests.**
+
+To allow your GitHub Actions workflow to create new pull requests and submit approving reviews, you need to enable a specific repository setting.
+
+**Steps:**
+
+1.  Go to your repository's "Settings" tab.
+2.  Navigate to "Actions" under "Code and automation" in the left sidebar.
+3.  In the "Workflow permissions" section, check **"Allow GitHub Actions to create and approve pull requests."**
+4.  Click "Save."
+![image](https://github.com/user-attachments/assets/070d047a-bbbb-4225-b01b-1d2c1a6e5156)
+
+**Explanation:**
+This setting grants the `GITHUB_TOKEN` permission to create pull requests and submit approving reviews. Use with caution and ensure your workflows are secure. For more specific permissions (like commenting or requesting changes), configure the `permissions` key in your workflow YAML file.
+
 
 ## ⚙️ Configuration
 
