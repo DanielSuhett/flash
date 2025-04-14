@@ -29,6 +29,7 @@ export interface GeminiResponse {
 export interface CodeReviewIssues {
   security: string[];
   performance: string[];
+  typescript: string[];
 }
 
 export interface CodeReviewComment {
@@ -52,6 +53,7 @@ export interface CodeReviewSuggestion {
   file: string;
   location: string;
   description: string;
+  typeIssue: boolean;
 }
 
 export interface CodeReviewSuggestions {

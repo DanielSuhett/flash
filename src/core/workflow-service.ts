@@ -164,6 +164,12 @@ export class WorkflowService {
       );
     }
 
+    if (reviewResult.issues.typescript.length > 0) {
+      sections.push(
+        `## TypeScript Issues\n${reviewResult.issues.typescript.map((issue: string) => `- ${issue}`).join('\n')}`
+      );
+    }
+
     return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
   }
 
