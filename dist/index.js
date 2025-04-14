@@ -38660,11 +38660,11 @@ class WorkflowService {
         const issues = this.buildIssuesSection(reviewResult);
         const approval = this.buildApprovalSection(reviewResult);
         const tokenUsage = this.buildTokenUsageSection(reviewResult);
-        const watermark = '\n\n---\n*Reviewed by rreviewer* 🤖';
+        const watermark = '\n\n---\n*Reviewed by flash* ✨';
         return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
     }
     buildSummarySection(reviewResult) {
-        return `# Code Review Summary\n\n${reviewResult.summary}\n\n`;
+        return `# Flash Review Summary\n\n${reviewResult.summary}\n\n`;
     }
     buildSuggestionsSection(reviewResult) {
         const sections = [];
@@ -38726,7 +38726,6 @@ function getActionConfig() {
         },
         review: {
             autoApprove: core.getBooleanInput('auto-approve', { required: false }),
-            qualityThreshold: Number(core.getInput('quality-threshold', { required: false })) || 7,
         },
         index: {
             cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
