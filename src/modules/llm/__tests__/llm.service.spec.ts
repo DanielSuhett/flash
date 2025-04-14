@@ -83,6 +83,7 @@ describe('LlmService', () => {
         issues: {
           security: [],
           performance: [],
+          typescript: [],
         },
         summary: 'test summary',
         approvalRecommended: true,
@@ -140,6 +141,7 @@ describe('LlmService', () => {
       issues: {
         security: [],
         performance: [],
+        typescript: [],
       },
       summary: 'test summary',
       approvalRecommended: true,
