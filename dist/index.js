@@ -38275,8 +38275,8 @@ class CodeIndexer {
 ;// CONCATENATED MODULE: ./src/modules/llm/mappers/llm.mapper.ts
 class LlmMapper {
     static getSystemInstruction() {
-        return `You are an expert code reviewer with 10 years of experience in developing 
-    and reviewing large-scale applications. You specialize in web application development.
+        return `You are an expert TypeScript code reviewer with 10 years of experience in developing 
+    and reviewing large-scale applications. You specialize in web application development and TypeScript type system.
   
   SYSTEM INSTRUCTIONS:
   1. You MUST respond with ONLY a valid JSON object.
@@ -38284,6 +38284,16 @@ class LlmMapper {
   3. The response must strictly follow the provided schema.
   4. If no issues are found, return empty arrays for the 'issues' fields and relevant empty arrays within 'suggestions'.
   5. Never recommend approval if critical issues are found. Base the 'approvalRecommended' boolean on this rule.
+  6. Pay special attention to TypeScript-specific issues:
+     - Type compatibility and type safety
+     - Interface implementations
+     - Generic type parameters
+     - Type assertions and type guards
+     - Union and intersection types
+     - Strict null checks
+     - Property access safety
+     - Type inference issues
+     - Module import/export consistency
   
   IMPORTANT: Return ONLY a valid JSON object with this exact structure,
   without any markdown formatting, code blocks, or additional text.
@@ -38292,7 +38302,8 @@ class LlmMapper {
   {
     "issues": {
       "security": string[],
-      "performance": string[]
+      "performance": string[],
+      "typescript": string[]
     },
     "summary": string,
     "approvalRecommended": boolean,
@@ -38301,16 +38312,18 @@ class LlmMapper {
         {
           "category": string,
           "file": string,
-          "location": string, // e.g., "line 15" or "lines 20-25"
-          "description": string
+          "location": string,
+          "description": string,
+          "typeIssue": boolean
         }
       ],
       "important": [
         {
           "category": string,
           "file": string,
-          "location": string, // e.g., "line 15" or "lines 20-25"
-          "description": string
+          "location": string,
+          "description": string,
+          "typeIssue": boolean
         }
       ]
     }
@@ -38327,33 +38340,41 @@ Review Focus:
 2. A recommendation to approve or request changes
 3. If problem is not related to the PR, suggest but don't put in review criteria
 4. Organized suggestions by category, focusing on problems that need to be addressed:
-   - Critical issues that must be fixed (bugs, potential errors, security vulnerabilities)
+   - Critical issues that must be fixed (bugs, potential errors, security vulnerabilities, type errors)
    - Important improvements related to preventing future bugs or improving code robustness
    Each suggestion should include:
    - Category (e.g., 'bug', 'type-safety', 'performance', 'security')
    - File location (file path and line numbers)
    - Clear explanation of the issue and how to fix it
+   - Whether it's a TypeScript-specific issue
    - Exclude documentation and comment expectations from review criteria
 5. Pay attention to the following aspects relevant to a ${appType ?? 'fullstack'} application
 6. If a problem is not directly related to the diff in PR, ignore it
 7. If no issues are found, return an empty array for the issues field
-8. Pay special attention to:
+8. Pay special attention (deny approval if):
+     - Type compatibility and type safety issues
+     - Interface implementations and missing methods
+     - Generic type parameter constraints
+     - Type assertions and type guards usage
+     - Union and intersection type correctness
+     - Strict null checks and undefined access
+     - Property access safety and optional chaining
+     - Type inference issues and explicit types
+     - Module import/export consistency
      - Undefined function references
      - Missing function implementations
      - Inconsistent function usage
      - Unused variables or functions
-     - Type mismatches
      - Runtime errors
      - Missing imports
      - Circular dependencies
-9. Flag any function that is referenced but not defined as a critical issue
-10. Flag any function that is defined but not used as an important issue
-11. Flag any type mismatches or potential runtime errors as critical issues
-12. Reject any PR that contains critical issues - these must be fixed before approval
+9. Flag any function that is referenced but not defined as a critical issue and deny approval if found
+10. Flag any function that is defined but not used as an important issue and deny approval if found
+11. Flag any type mismatches or potential runtime errors as critical issues and deny approval if found
+12. Reject any PR that contains any issues - these must be fixed before approval
 13. Analyze the actual code changes in detail, not just the structure
 14. Consider the context of the changes in relation to the rest of the codebase
-15. Look for potential side effects of the changes
-16. Check for proper error handling and edge cases
+15. Check for proper error handling and edge cases
 `,
             },
             {
@@ -38426,6 +38447,7 @@ ${content}`;
                 !result.issues ||
                 !Array.isArray(result.issues.security) ||
                 !Array.isArray(result.issues.performance) ||
+                !Array.isArray(result.issues.typescript) ||
                 typeof result.approvalRecommended !== 'boolean' ||
                 !Array.isArray(result.suggestions.critical) ||
                 !Array.isArray(result.suggestions.important)) {
@@ -38433,6 +38455,7 @@ ${content}`;
                     issues: {
                         security: [],
                         performance: [],
+                        typescript: [],
                     },
                     summary: text.content.slice(0, 500),
                     approvalRecommended: false,
@@ -38457,6 +38480,7 @@ ${content}`;
                 issues: {
                     security: [],
                     performance: [],
+                    typescript: [],
                 },
                 summary: text.content.slice(0, 500),
                 approvalRecommended: false,
@@ -38665,6 +38689,9 @@ class WorkflowService {
         }
         if (reviewResult.issues.performance.length > 0) {
             sections.push(`## Performance Issues\n${reviewResult.issues.performance.map((issue) => `- ${issue}`).join('\n')}`);
+        }
+        if (reviewResult.issues.typescript.length > 0) {
+            sections.push(`## TypeScript Issues\n${reviewResult.issues.typescript.map((issue) => `- ${issue}`).join('\n')}`);
         }
         return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
     }
