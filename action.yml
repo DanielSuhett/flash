@@ -1,6 +1,6 @@
 name: 'TypeScript Deep Code Review'
 description: 'Performs deep code review on TypeScript pull requests using AI'
-author: 'ProjectR'
+author: 'flash'
 inputs:
   github-token:
     description: 'GitHub token for API access'

@@ -96,7 +96,7 @@ This setting grants the `GITHUB_TOKEN` permission to create pull requests and su
 ### Setup
 
 ```bash
-git clone https://github.com/projectr/Flash.git
+git clone https://github.com/DanielSuhett/flash.git
 cd Flash
 pnpm install
 ```

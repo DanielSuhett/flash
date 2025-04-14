@@ -18,7 +18,7 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global --add safe.directory /__w/projectr/projectr
+          git config --global --add safe.directory /__w/flash/flash
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
