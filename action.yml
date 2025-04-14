@@ -35,5 +35,5 @@ runs:
   using: 'node20'
   main: 'dist/index.js'
 branding:
-  icon: 'code'
-  color: 'blue' 
+  icon: 'zap'
+  color: 'yellow' 
