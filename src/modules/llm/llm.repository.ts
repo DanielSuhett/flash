@@ -5,20 +5,7 @@ import { LlmMapper } from './mappers/llm.mapper.js';
 export class LlmRepository {
   constructor(private readonly config: LlmConfig) {}
 
-  private mapper = LlmMapper;
-
-  async generateContent(prompt: Array<{ text: string }>, returnJSON: boolean = true): Promise<LlmResponse> {
-    core.info('Starting Gemini Service');
-
-    if (!this.config?.apiKey) {
-      throw new Error('Gemini API key is required');
-    }
-
-    const model = this.config?.model || 'gemini-2.0-flash';
-    const endpoint = this.mapper.buildGeminiEndpoint(model);
-    const response = await this.executeRequest(endpoint, prompt, returnJSON);
-
-    if (!response.ok) {
+  
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
 
