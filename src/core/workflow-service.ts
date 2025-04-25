@@ -1,21 +1,19 @@
 import * as core from '@actions/core';
 import { ActionConfig, PullRequestInfo, IndexedCodebase } from '../types/index.js';
 import { GitHubService } from '../github/github-service.js';
-import { CodeIndexer } from '../indexing/indexer.js';
 import { LlmService } from '../modules/llm/llm.service.js';
 import { CodeReviewResponse } from '../modules/llm/entities/index.js';
 import { LlmRepository } from '../modules/llm/llm.repository.js';
+import { MarkdownCodebase } from '../types/index.js';
 
 export class WorkflowService {
   private config: ActionConfig;
   private githubService: GitHubService;
-  private codeIndexer: CodeIndexer;
   private llmService: LlmService;
 
   constructor(config: ActionConfig) {
     this.config = config;
     this.githubService = new GitHubService(config.githubToken);
-    this.codeIndexer = new CodeIndexer(config.githubToken);
     this.llmService = new LlmService(
       new LlmRepository({
         apiKey: config.llm.apiKey,
@@ -28,33 +26,28 @@ export class WorkflowService {
   async processReview(owner: string, repo: string, prNumber: number): Promise<void> {
     try {
       core.info(`Starting review for PR #${prNumber} in ${owner}/${repo}`);
-
       const pullRequestInfo = await this.githubService.getPullRequestInfo(owner, repo, prNumber);
-
       core.info(`Analyzing PR: ${pullRequestInfo.title}`);
 
       const prWithContents = await this.githubService.loadFileContents(pullRequestInfo);
-
       core.info(`Loaded content for ${prWithContents.files.length} changed files`);
 
-      const changedFiles = pullRequestInfo.files.map((file) => file.filename);
-
-      core.info('Indexing codebase structure...');
-
-      const indexedCodebase = await this.codeIndexer.indexCodebase(
+      core.info('Generating markdown codebase representation...');
+      const markdownCodebase = await this.githubService.indexCodebaseAsMarkdown(
         owner,
         repo,
         pullRequestInfo.baseBranch,
-        changedFiles
+        pullRequestInfo.files.map((f) => f.filename)
       );
 
-      if (indexedCodebase.files.length === 0) {
-        throw new Error('No TypeScript files found in the repository');
+      if (markdownCodebase.includedFiles.length === 0) {
+        throw new Error('No files found in the repository');
       }
 
-      core.info('Performing code review...');
-      const appType = this.determineAppType(indexedCodebase);
-      const reviewResult = await this.llmService.reviewCode(indexedCodebase, prWithContents, appType);
+      core.info(`Indexed ${markdownCodebase.includedFiles.length} files (${markdownCodebase.tokenCount} tokens)`);
+      
+      const appType = this.determineAppType(markdownCodebase);
+      const reviewResult = await this.llmService.reviewCode(markdownCodebase, prWithContents, appType);
 
       core.info('Posting review results...');
       await this.postReviewComment(prWithContents, reviewResult);
@@ -66,23 +59,18 @@ export class WorkflowService {
     }
   }
 
-  private determineAppType(codebase: IndexedCodebase): 'frontend' | 'backend' | 'fullstack' {
-    const hasReactFiles = codebase.files.some(
-      (file) => file.path.includes('components') || file.path.includes('pages') || file.path.endsWith('.tsx')
+  private determineAppType(codebase: MarkdownCodebase): 'frontend' | 'backend' | 'fullstack' {
+    const hasReactFiles = codebase.includedFiles.some(
+      (file) => file.includes('components') || file.includes('pages') || file.endsWith('.tsx')
     );
-    const hasServerFiles = codebase.files.some(
+    const hasServerFiles = codebase.includedFiles.some(
       (file) =>
-        file.path.includes('controllers') || file.path.includes('services') || file.path.includes('repositories')
+        file.includes('controllers') || file.includes('services') || file.includes('repositories')
     );
 
     if (hasReactFiles && hasServerFiles) return 'fullstack';
     if (hasReactFiles) return 'frontend';
-
     return 'backend';
-  }
-
-  private shouldAutoApprove(reviewResult: CodeReviewResponse): boolean {
-    return reviewResult.approvalRecommended;
   }
 
   private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {

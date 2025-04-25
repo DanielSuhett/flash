@@ -1,10 +1,22 @@
 import type { RestEndpointMethodTypes } from '@octokit/rest';
-import { PullRequestInfo, FileChange } from '../types/index.js';
+import { PullRequestInfo, FileChange, MarkdownCodebase } from '../types/index.js';
 import { Octokit } from '@octokit/rest';
 import * as core from '@actions/core';
+import ignore from 'ignore';
 
 export class GitHubService {
   private octokit: Octokit;
+  private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  private readonly DEFAULT_IGNORES = [
+    'node_modules',
+    'dist',
+    '.git',
+    '*.lock',
+    '*.log',
+    '.DS_Store',
+    'coverage',
+    'build'
+  ];
 
   constructor(token: string) {
     this.octokit = new Octokit({
@@ -253,6 +265,118 @@ export class GitHubService {
       event: 'APPROVE',
       body: 'Automatically approved based on code review results.',
     });
+  }
+
+  private async getRepoTree(
+    owner: string,
+    repo: string,
+    ref: string
+  ): Promise<{ path: string; type: string; url: string }[]> {
+    try {
+      const { data } = await this.octokit.git.getTree({
+        owner,
+        repo,
+        tree_sha: ref,
+        recursive: 'true'
+      });
+
+      return data.tree.map(item => ({
+        path: item.path || '',
+        type: item.type || 'blob',
+        url: item.url || ''
+      }));
+    } catch (error) {
+      core.warning(`Failed to get repo tree: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return [];
+    }
+  }
+
+  private isTextFile(filename: string): boolean {
+    const textExtensions = ['.ts', '.js', '.json', '.md', '.yml', '.yaml', '.txt', '.html', '.css', '.scss', '.jsx', '.tsx'];
+    return textExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+  }
+
+  private shouldIgnoreFile(path: string): boolean {
+    const ignoreFilter = ignore.default().add(this.DEFAULT_IGNORES);
+    return ignoreFilter.ignores(path);
+  }
+
+  private removeWhitespace(content: string, filename: string): string {
+    const whitespaceDependent = ['.md', '.yml', '.yaml'];
+    if (whitespaceDependent.some(ext => filename.endsWith(ext))) {
+      return content;
+    }
+    return content.replace(/\s+/g, ' ').trim();
+  }
+
+  async indexCodebaseAsMarkdown(
+    owner: string,
+    repo: string,
+    ref: string,
+    prioritizedFiles: string[] = []
+  ): Promise<MarkdownCodebase> {
+    let output = '';
+    let includedFiles: string[] = [];
+    let ignoredCount = 0;
+    let binaryCount = 0;
+    let totalSize = 0;
+
+    const files = await this.getRepoTree(owner, repo, ref);
+    const sortedFiles = [...files].sort((a, b) => 
+      a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
+    const prioritizedSet = new Set(prioritizedFiles);
+    const prioritizedItems = sortedFiles.filter(f => prioritizedSet.has(f.path));
+    const remainingItems = sortedFiles.filter(f => !prioritizedSet.has(f.path));
+    const processOrder = [...prioritizedItems, ...remainingItems];
+
+    for (const file of processOrder) {
+      if (this.shouldIgnoreFile(file.path)) {
+        ignoredCount++;
+        continue;
+      }
+
+      if (file.type === 'blob') {
+        if (this.isTextFile(file.path)) {
+          try {
+            const content = await this.getFileContent(owner, repo, file.path, ref);
+            if (content) {
+              const processedContent = this.removeWhitespace(content, file.path);
+              const extension = file.path.split('.').pop() || '';
+              
+              output += `# ${file.path}\n\n`;
+              output += `\`\`\`${extension}\n`;
+              output += processedContent;
+              output += '\n\`\`\`\n\n';
+
+              includedFiles.push(file.path);
+              totalSize += processedContent.length;
+            }
+          } catch (error) {
+            core.warning(`Failed to process ${file.path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        } else {
+          output += `# ${file.path}\n\n`;
+          output += `This is a binary file.\n\n`;
+          binaryCount++;
+        }
+      }
+
+      if (totalSize > this.MAX_FILE_SIZE) {
+        core.warning('Maximum file size exceeded. Some files may be omitted.');
+        break;
+      }
+    }
+
+    return {
+      content: output,
+      includedFiles,
+      totalFiles: files.length,
+      ignoredFiles: ignoredCount,
+      binaryFiles: binaryCount,
+      tokenCount: Math.ceil(totalSize / 4)
+    };
   }
 }
 

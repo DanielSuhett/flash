@@ -85,3 +85,12 @@ export interface CodeReviewComment {
 }
 
 export type LlmProvider = 'gemini' | 'openai' | 'anthropic';
+
+export interface MarkdownCodebase {
+  content: string;
+  includedFiles: string[];
+  tokenCount?: number;
+  totalFiles: number;
+  ignoredFiles: number;
+  binaryFiles: number;
+}

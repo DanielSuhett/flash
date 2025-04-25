@@ -1,4 +1,4 @@
-import { IndexedCodebase, PullRequestInfo } from '../../../types/index.js';
+import { PullRequestInfo, MarkdownCodebase } from '../../../types/index.js';
 import { CodeReviewResponse, GeminiResponse, LlmResponse } from '../entities/index.js';
 
 export class LlmMapper {
@@ -13,13 +13,12 @@ export class LlmMapper {
   4. If no issues are found, return empty arrays for the 'issues' fields and relevant empty arrays within 'suggestions'.
   5. Never recommend approval if critical issues are found. Base the 'approvalRecommended' boolean on this rule.
   6. Pay special attention to TypeScript-specific issues:
-     - Type compatibility and type safety
+     - Type compatibility
      - Interface implementations
      - Generic type parameters
      - Type assertions and type guards
      - Union and intersection types
      - Strict null checks
-     - Property access safety
      - Type inference issues
      - Module import/export consistency
   
@@ -59,13 +58,11 @@ export class LlmMapper {
   }
 
   static buildReviewPrompt(
-    indexedCodebase: IndexedCodebase,
+    markdownCodebase: MarkdownCodebase,
     pullRequest: PullRequestInfo,
-    appType: 'frontend' | 'backend' | 'fullstack'
+    appType: string
   ): Array<{ text: string }> {
-    const codebaseSummary = this.buildCodebaseSummary(indexedCodebase);
     const prSummary = this.buildPRSummary(pullRequest);
-
     return [
       {
         text: ` 
@@ -77,16 +74,17 @@ Review Focus:
    - Critical issues that must be fixed (bugs, potential errors, security vulnerabilities, type errors)
    - Important improvements related to preventing future bugs or improving code robustness
    Each suggestion should include:
-   - Category (e.g., 'bug', 'type-safety', 'performance', 'security')
+   - Category (e.g., 'bug', 'performance', 'security')
    - File location (file path and line numbers)
    - Clear explanation of the issue and how to fix it
    - Whether it's a TypeScript-specific issue
    - Exclude documentation and comment expectations from review criteria
+   - Exclude type any usage as a issue from review criteria
 5. Pay attention to the following aspects relevant to a ${appType ?? 'fullstack'} application
 6. If a problem is not directly related to the diff in PR, ignore it
 7. If no issues are found, return an empty array for the issues field
 8. Pay special attention (deny approval if):
-     - Type compatibility and type safety issues
+     - Type compatibility
      - Interface implementations and missing methods
      - Generic type parameter constraints
      - Type assertions and type guards usage
@@ -98,17 +96,13 @@ Review Focus:
      - Undefined function references
      - Missing function implementations
      - Inconsistent function usage
-     - Unused variables or functions
      - Runtime errors
      - Missing imports
      - Circular dependencies
-9. Flag any function that is referenced but not defined as a critical issue and deny approval if found
-10. Flag any function that is defined but not used as an important issue and deny approval if found
-11. Flag any type mismatches or potential runtime errors as critical issues and deny approval if found
-12. Reject any PR that contains any issues - these must be fixed before approval
-13. Analyze the actual code changes in detail, not just the structure
-14. Consider the context of the changes in relation to the rest of the codebase
-15. Check for proper error handling and edge cases
+9. Reject any PR that contains any critical issues - these must be fixed before approval
+10. Analyze the actual code changes in detail, not just the structure
+11. Consider the context of the changes in relation to the rest of the codebase
+12. Check for proper error handling and edge cases
 `,
       },
       {
@@ -116,8 +110,8 @@ Review Focus:
     ${prSummary}`,
       },
       {
-        text: `Here's a summary of the codebase structure context:
-    ${codebaseSummary}`,
+        text: `Here's the codebase structure context:
+    ${markdownCodebase.content}`,
       },
     ];
   }
@@ -127,25 +121,6 @@ Review Focus:
 
 ${content}`;
   }
-
-  private static buildCodebaseSummary(indexedCodebase: IndexedCodebase): string {
-    let summary = '';
-
-    for (const file of indexedCodebase.files) {
-      summary += `\nFile: ${file.path}\n`;
-      for (const decl of file.declarations) {
-        summary += `  - ${decl.type} ${decl.name}`;
-        if (decl.exported) summary += ' (exported)';
-        if (decl.dependencies?.length) {
-          summary += `\n    Dependencies: ${decl.dependencies.join(', ')}`;
-        }
-        summary += '\n';
-      }
-    }
-
-    return summary;
-  }
-
   private static buildPRSummary(pullRequest: PullRequestInfo): string {
     let summary = `Title: ${pullRequest.title}\n`;
 
