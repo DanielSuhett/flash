@@ -139,12 +139,17 @@ export class GitHubService {
   }
 
   async loadFileContents(pullRequestInfo: PullRequestInfo): Promise<PullRequestInfo> {
-    const { owner, repo, baseBranch, files } = pullRequestInfo;
+    const { owner, repo, baseBranch, headBranch, files } = pullRequestInfo;
 
     const filesWithContent = await Promise.all(
       files.map(async (file) => {
         if (file.status !== 'removed') {
-          const content = await this.getFileContent(owner, repo, file.filename, baseBranch);
+          const branchToUse = file.status === 'added' ? headBranch : baseBranch;
+          let content = await this.getFileContent(owner, repo, file.filename, branchToUse);
+          
+          if (!content && file.status === 'modified') {
+            content = await this.getFileContent(owner, repo, file.filename, baseBranch);
+          }
 
           return {
             ...file,
