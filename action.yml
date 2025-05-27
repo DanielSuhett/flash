@@ -20,6 +20,11 @@ inputs:
     description: 'Language code for the review output (e.g., en, es, fr, de, etc.)'
     required: false
     default: 'en'
+  index-cache-enabled:
+    description: 'Enable codebase indexing cache between runs'
+    required: false
+    default: 'true'
+    type: boolean
   pr-number: 
     description: 'Pull request number (for manual triggering)'
     required: false
