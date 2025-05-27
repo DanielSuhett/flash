@@ -80,7 +80,6 @@ export class WorkflowService {
       comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
     }
 
-    const event = reviewResult.approvalRecommended ? 'APPROVE' : 'REQUEST_CHANGES';
 
     await this.githubService.createReview(
       pullRequest.owner,
@@ -88,7 +87,6 @@ export class WorkflowService {
       pullRequest.prNumber,
       pullRequest.headSha,
       comment,
-      event
     );
   }
 
