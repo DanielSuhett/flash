@@ -38728,14 +38728,25 @@ class GitHubService {
             core.warning(`Skipping comment for ${comment.path}:${comment.position} - position not found in diff`);
             return [];
         });
-        await this.octokit.pulls.createReview({
+        await this.octokit.issues.createComment({
             owner,
             repo,
-            pull_number: prNumber,
-            commit_id,
+            issue_number: prNumber,
             body,
-            comments: validComments,
         });
+        if (validComments && validComments.length > 0) {
+            for (const comment of validComments) {
+                await this.octokit.pulls.createReviewComment({
+                    owner,
+                    repo,
+                    pull_number: prNumber,
+                    commit_id,
+                    path: comment.path,
+                    position: comment.position,
+                    body: comment.body,
+                });
+            }
+        }
     }
     async getRepoTree(owner, repo, ref) {
         try {
@@ -39113,9 +39124,7 @@ class LlmRepository {
                         parts: prompt,
                     },
                 ],
-                system_instruction: {
-                    parts: [{ text: systemInstruction }],
-                },
+                ...(systemInstruction && returnJSON ? { system_instruction: { parts: [{ text: systemInstruction }] } } : {}),
                 generation_config: {
                     responseMimeType: returnJSON ? 'application/json' : 'text/plain',
                     maxOutputTokens: this.config.maxTokens,
@@ -39188,10 +39197,9 @@ class WorkflowService {
         const summary = this.buildSummarySection(reviewResult);
         const suggestions = this.buildSuggestionsSection(reviewResult);
         const issues = this.buildIssuesSection(reviewResult);
-        const approval = this.buildApprovalSection(reviewResult);
         const tokenUsage = this.buildTokenUsageSection(reviewResult);
         const watermark = '\n\n---\n*Reviewed by flash* ✨';
-        return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+        return `${summary}\n\n${suggestions}\n\n${issues}\n\n${tokenUsage}${watermark}`;
     }
     buildSummarySection(reviewResult) {
         return `# Flash Review Summary\n\n${reviewResult.summary}\n\n`;
@@ -39224,12 +39232,6 @@ class WorkflowService {
             sections.push(`## TypeScript Issues\n${reviewResult.issues.typescript.map((issue) => `- ${issue}`).join('\n')}`);
         }
         return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
-    }
-    buildApprovalSection(reviewResult) {
-        const isApproved = reviewResult.approvalRecommended;
-        const emoji = isApproved ? '✅' : '❌';
-        const status = isApproved ? 'Approved' : 'Changes Requested';
-        return `## Review Status\n\n${emoji} **${status}**`;
     }
     buildTokenUsageSection(reviewResult) {
         if (!reviewResult.usageMetadata) {
