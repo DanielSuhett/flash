@@ -69,14 +69,14 @@ export class LlmMapper {
 You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs and logic errors.
 
 ## Review Structure:
-1. **Change Analysis**: Explain WHAT changed, WHY it changed, and HOW it impacts the system
+1. **Function Analysis**: Analyze ONLY the functions directly related to the changes
 2. **Critical Runtime Issues**: Bugs that will cause runtime failures or incorrect behavior
-3. **Logic Validation**: Verify business logic correctness within the context of changes
+3. **Logic Validation**: Verify business logic correctness within the context of changed functions
 4. **Approval Recommendation**: Approve only if no critical issues exist
 
 ## Focus Areas (${appType ?? 'fullstack'} application):
 **CRITICAL ISSUES (must fix before approval):**
-- Runtime errors and exceptions
+- Runtime errors and exceptions in modified functions
 - Logic bugs that produce incorrect results
 - Null/undefined access without proper validation
 - Missing error handling for critical paths
@@ -84,37 +84,40 @@ You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs an
 - Incorrect API usage or parameter passing
 - Data validation gaps that could cause failures
 
-**IGNORE (not review criteria):**
+**IGNORE:**
 - Code style and formatting
 - Documentation quality
 - Performance optimizations (unless causing bugs)
 - Type 'any' usage
 - Code organization preferences
+- Functions not directly related to changes
+- Imported files that aren't modified
+- Test files and configurations
 
-## Validation Requirements:
-- Verify input validation exists where needed
-- Check error boundaries and fallback handling  
-- Ensure async operations handle failures properly
-- Validate data transformations are correct
-- Confirm edge cases are handled
+## Function Analysis Requirements:
+- Only analyze functions that are:
+  1. Directly modified in the PR
+  2. Called by modified functions
+  3. Calling the modified functions
+- For each relevant function:
+  1. Verify input validation exists where needed
+  2. Check error boundaries and fallback handling
+  3. Ensure async operations handle failures properly
+  4. Validate data transformations are correct
+  5. Confirm edge cases are handled
 
 ## Output Requirements:
-- Clearly explain WHAT each change does
-- Justify WHY each change was necessary
-- Describe HOW it affects system behavior
+- For each analyzed function:
+  1. Explain WHAT the function does
+  2. Justify WHY the changes were necessary
+  3. Describe HOW it affects system behavior
 - Only flag issues that cause runtime problems or logic errors
 - Provide specific file locations and line numbers for issues
-- If no critical issues found, approve the PR
-`,
-      },
-      {
-        text: `Here's a summary of the PR changes:
-    ${prSummary}`,
-      },
-      {
-        text: `Here's the codebase structure context:
-    ${markdownCodebase.content}`,
-      },
+- If no critical issues found in analyzed functions, approve the PR
+
+## Changes to Review:
+${prSummary}`,
+      }
     ];
   }
 
@@ -151,22 +154,19 @@ Generate a well-structured, professional review in ${targetLanguage} that mainta
   }
   private static buildPRSummary(pullRequest: PullRequestInfo): string {
     let summary = `Title: ${pullRequest.title}\n`;
-
-    summary += `Description: ${pullRequest.body || 'No description'}\n\n`;
-    summary += `Changed Files:\n`;
+    if (pullRequest.body) {
+      summary += `Description: ${pullRequest.body}\n\n`;
+    }
 
     for (const file of pullRequest.files) {
-      summary += `\n${file.filename} (${file.status}, +${file.additions}, -${file.deletions}):\n`;
-      if (file.contents) {
-        summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
+      summary += `\nFile: ${file.filename} (${file.status}, +${file.additions}, -${file.deletions})\n`;
+      
+      if (file.status === 'modified' && file.patch) {
+        summary += `Changes:\n\`\`\`diff\n${file.patch}\`\`\`\n`;
       }
-      summary += `\nChanges in this file:\n`;
-      if (file.patch) {
-        summary += `\`\`\`diff\n${file.patch}\`\`\`\n`;
-      }
-      summary += `\nContent in this file:\n`;
-      if (file.contents) {
-        summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
+      
+      if (file.status === 'added' && file.contents) {
+        summary += `New File Content:\n\`\`\`typescript\n${file.contents}\`\`\`\n`;
       }
     }
 

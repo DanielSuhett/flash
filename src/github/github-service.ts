@@ -7,6 +7,7 @@ import ignore from 'ignore';
 export class GitHubService {
   private octokit: Octokit;
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  private readonly MAX_FILE_SIZE_PER_FILE = 100 * 1024; // 100KB
   private readonly DEFAULT_IGNORES = [
     'node_modules',
     'dist',
@@ -15,7 +16,26 @@ export class GitHubService {
     '*.log',
     '.DS_Store',
     'coverage',
-    'build'
+    'build',
+    'test',
+    'tests',
+    '__tests__',
+    '__mocks__',
+    '*.test.*',
+    '*.spec.*',
+    '*.min.*',
+    '*.map',
+    'public',
+    'assets',
+    'images',
+    'img',
+    'docs',
+    '.next',
+    '.cache',
+    '.husky',
+    '.github',
+    'vendor',
+    'third-party'
   ];
 
   constructor(token: string) {
@@ -298,13 +318,32 @@ export class GitHubService {
   }
 
   private isTextFile(filename: string): boolean {
-    const textExtensions = ['.ts', '.js', '.json', '.md', '.yml', '.yaml', '.txt', '.html', '.css', '.scss', '.jsx', '.tsx'];
-    return textExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+    const textExtensions = [
+      '.ts',
+      '.tsx',
+      '.js',
+      '.jsx',
+      '.json',
+      '.md',
+      '.yml',
+      '.yaml'
+    ];
+    const path = filename.toLowerCase();
+    
+    return textExtensions.some(ext => path.endsWith(ext)) && 
+           !path.includes('.min.') && 
+           !path.includes('.d.ts') &&
+           !path.endsWith('.test.ts') &&
+           !path.endsWith('.spec.ts');
+  }
+
+  private exceedsFileSizeLimit(content: string): boolean {
+    return content.length > this.MAX_FILE_SIZE_PER_FILE;
   }
 
   private shouldIgnoreFile(path: string): boolean {
     const ignoreFilter = ignore.default().add(this.DEFAULT_IGNORES);
-    return ignoreFilter.ignores(path);
+    return ignoreFilter.ignores(path) || path.split('/').some(part => part.startsWith('.'));
   }
 
   private removeWhitespace(content: string, filename: string): string {
@@ -326,63 +365,80 @@ export class GitHubService {
     let ignoredCount = 0;
     let binaryCount = 0;
     let totalSize = 0;
+    let skippedDueToSize = 0;
 
     const files = await this.getRepoTree(owner, repo, ref);
-    const sortedFiles = [...files].sort((a, b) => 
-      a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' })
-    );
+    
+    const filesToProcess = files.filter(f => prioritizedFiles.includes(f.path));
 
-    const prioritizedSet = new Set(prioritizedFiles);
-    const prioritizedItems = sortedFiles.filter(f => prioritizedSet.has(f.path));
-    const remainingItems = sortedFiles.filter(f => !prioritizedSet.has(f.path));
-    const processOrder = [...prioritizedItems, ...remainingItems];
-
-    for (const file of processOrder) {
+    for (const file of filesToProcess) {
       if (this.shouldIgnoreFile(file.path)) {
         ignoredCount++;
         continue;
       }
 
-      if (file.type === 'blob') {
-        if (this.isTextFile(file.path)) {
-          try {
-            const content = await this.getFileContent(owner, repo, file.path, ref);
-            if (content) {
-              const processedContent = this.removeWhitespace(content, file.path);
-              const extension = file.path.split('.').pop() || '';
-              
-              output += `# ${file.path}\n\n`;
-              output += `\`\`\`${extension}\n`;
-              output += processedContent;
-              output += '\n\`\`\`\n\n';
+      if (file.type === 'blob' && this.isTextFile(file.path)) {
+        try {
+          const content = await this.getFileContent(owner, repo, file.path, ref);
+          if (!content) continue;
 
-              includedFiles.push(file.path);
-              totalSize += processedContent.length;
-            }
-          } catch (error) {
-            core.warning(`Failed to process ${file.path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          if (this.exceedsFileSizeLimit(content)) {
+            skippedDueToSize++;
+            core.debug(`Skipping ${file.path} due to size limit (${content.length} bytes)`);
+            continue;
           }
-        } else {
-          output += `# ${file.path}\n\n`;
-          output += `This is a binary file.\n\n`;
-          binaryCount++;
-        }
-      }
 
-      if (totalSize > this.MAX_FILE_SIZE) {
-        core.warning('Maximum file size exceeded. Some files may be omitted.');
-        break;
+          const relevantContent = this.extractRelevantFunctions(content);
+          if (!relevantContent) continue;
+
+          const processedContent = this.removeWhitespace(relevantContent, file.path);
+          const extension = file.path.split('.').pop() || '';
+          
+          output += `# ${file.path}\n\n`;
+          output += `\`\`\`${extension}\n`;
+          output += processedContent;
+          output += '\n\`\`\`\n\n';
+
+          includedFiles.push(file.path);
+          totalSize += processedContent.length;
+
+          if (totalSize > this.MAX_FILE_SIZE) {
+            core.warning('Maximum total size exceeded. Some files may be omitted.');
+            break;
+          }
+        } catch (error) {
+          core.warning(`Failed to process ${file.path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        binaryCount++;
       }
+    }
+
+    if (skippedDueToSize > 0) {
+      core.info(`Skipped ${skippedDueToSize} files due to individual size limits`);
     }
 
     return {
       content: output,
       includedFiles,
       totalFiles: files.length,
-      ignoredFiles: ignoredCount,
+      ignoredFiles: ignoredCount + skippedDueToSize,
       binaryFiles: binaryCount,
       tokenCount: Math.ceil(totalSize / 4)
     };
+  }
+
+  private extractRelevantFunctions(content: string): string | null {
+    const functionRegex = /(?:export\s+)?(?:async\s+)?(?:function|const)\s+\w+\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{]*?)?\s*{[^}]*}/gs;
+    const classMethodRegex = /(?:public|private|protected|async)?\s*\w+\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{]*?)?\s*{[^}]*}/gs;
+    
+    const functions = [...content.matchAll(functionRegex)].map(m => m[0]);
+    const methods = [...content.matchAll(classMethodRegex)].map(m => m[0]);
+    
+    const allFunctions = [...functions, ...methods];
+    if (allFunctions.length === 0) return null;
+
+    return allFunctions.join('\n\n');
   }
 }
 

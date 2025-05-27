@@ -11,7 +11,7 @@ inputs:
   gemini-model:
     description: 'Gemini model to use (e.g., gemini-2.0-flash, gemini-2.5-pro)'
     required: false
-    default: 'gemini-2.5-flash-preview-04-17-thinking'
+    default: 'gemini-2.0-flash'
   llm-max-tokens:
     description: 'Maximum number of tokens to use for the review'
     required: false
