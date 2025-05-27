@@ -39127,16 +39127,22 @@ class LlmRepository {
         }
         const model = this.config?.model || 'gemini-2.5-flash';
         const endpoint = this.mapper.buildGeminiEndpoint(model);
-        const response = await this.executeRequest(endpoint, prompt, returnJSON);
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        try {
+            const response = await this.executeRequest(endpoint, prompt, returnJSON);
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+            }
+            const data = (await response.json());
+            core.info(JSON.stringify(data));
+            core.info(`Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
+        ${data?.usageMetadata?.candidatesTokenCount} completion, 
+        ${data?.usageMetadata?.totalTokenCount} total`);
+            return this.mapper.mapGeminiResponse(data, model);
         }
-        const data = (await response.json());
-        core.info(JSON.stringify(data));
-        core.info(`Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
-      ${data?.usageMetadata?.candidatesTokenCount} completion, 
-      ${data?.usageMetadata?.totalTokenCount} total`);
-        return this.mapper.mapGeminiResponse(data, model);
+        catch (error) {
+            core.error(`Error generating content: ${error}`);
+            throw error;
+        }
     }
     async executeRequest(endpoint, prompt, returnJSON = true) {
         const systemInstruction = this.mapper.getSystemInstruction();
@@ -39304,7 +39310,7 @@ async function run() {
         const { owner, repo } = context.repo;
         let prNumber;
         if (context.eventName === 'pull_request') {
-            prNumber = context.payload.pull_request?.number ?? 4;
+            prNumber = context.payload.pull_request?.number;
             if (!prNumber) {
                 throw new Error('PR number not found in context');
             }
