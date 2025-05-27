@@ -3,7 +3,7 @@ import { LlmConfig, LlmResponse, GeminiResponse } from './entities/index.js';
 import { LlmMapper } from './mappers/llm.mapper.js';
 
 export class LlmRepository {
-  constructor(private readonly config: LlmConfig) {}
+  constructor(private readonly config: LlmConfig) { }
 
   private mapper = LlmMapper;
 
@@ -16,23 +16,27 @@ export class LlmRepository {
 
     const model = this.config?.model || 'gemini-2.5-flash';
     const endpoint = this.mapper.buildGeminiEndpoint(model);
-    const response = await this.executeRequest(endpoint, prompt, returnJSON);
+    try {
+      const response = await this.executeRequest(endpoint, prompt, returnJSON);
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as GeminiResponse;
+      core.info(JSON.stringify(data));
+
+      core.info(
+        `Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
+        ${data?.usageMetadata?.candidatesTokenCount} completion, 
+        ${data?.usageMetadata?.totalTokenCount} total`
+      );
+
+      return this.mapper.mapGeminiResponse(data, model);
+    } catch (error) {
+      core.error(`Error generating content: ${error}`);
+      throw error;
     }
-
-    const data = (await response.json()) as GeminiResponse;
-
-    core.info(JSON.stringify(data));
-
-    core.info(
-      `Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
-      ${data?.usageMetadata?.candidatesTokenCount} completion, 
-      ${data?.usageMetadata?.totalTokenCount} total`
-    );
-
-    return this.mapper.mapGeminiResponse(data, model);
   }
 
   private async executeRequest(endpoint: string, prompt: Array<{ text: string }>, returnJSON = true): Promise<Response> {
