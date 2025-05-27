@@ -20,14 +20,6 @@ inputs:
     description: 'Language code for the review output (e.g., en, es, fr, de, etc.)'
     required: false
     default: 'en'
-  auto-approve:
-    description: 'Whether to automatically approve PRs based on analysis'
-    required: false
-    default: 'false'
-  index-cache-enabled:
-    description: 'Whether to cache the indexed codebase between runs'
-    required: false
-    default: 'true'
   pr-number: 
     description: 'Pull request number (for manual triggering)'
     required: false

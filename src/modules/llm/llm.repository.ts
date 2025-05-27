@@ -51,9 +51,7 @@ export class LlmRepository {
             parts: prompt,
           },
         ],
-        system_instruction: {
-          parts: [{ text: systemInstruction }],
-        },
+        ...(systemInstruction && returnJSON ? { system_instruction: { parts: [{ text: systemInstruction }] } } : {}),
         generation_config: {
           responseMimeType: returnJSON ? 'application/json' : 'text/plain',
           maxOutputTokens: this.config.maxTokens,

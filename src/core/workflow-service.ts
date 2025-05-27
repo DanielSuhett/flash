@@ -94,11 +94,10 @@ export class WorkflowService {
     const summary = this.buildSummarySection(reviewResult);
     const suggestions = this.buildSuggestionsSection(reviewResult);
     const issues = this.buildIssuesSection(reviewResult);
-    const approval = this.buildApprovalSection(reviewResult);
     const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by flash* ✨';
 
-    return `${summary}\n\n${suggestions}\n\n${approval}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+    return `${summary}\n\n${suggestions}\n\n${issues}\n\n${tokenUsage}${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
@@ -157,14 +156,6 @@ export class WorkflowService {
     }
 
     return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
-  }
-
-  private buildApprovalSection(reviewResult: CodeReviewResponse): string {
-    const isApproved = reviewResult.approvalRecommended;
-    const emoji = isApproved ? '✅' : '❌';
-    const status = isApproved ? 'Approved' : 'Changes Requested';
-
-    return `## Review Status\n\n${emoji} **${status}**`;
   }
 
   private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {

@@ -245,14 +245,26 @@ export class GitHubService {
       return [];
     });
 
-    await this.octokit.pulls.createReview({
+    await this.octokit.issues.createComment({
       owner,
       repo,
-      pull_number: prNumber,
-      commit_id,
+      issue_number: prNumber,
       body,
-      comments: validComments,
     });
+
+    if (validComments && validComments.length > 0) {
+      for (const comment of validComments) {
+        await this.octokit.pulls.createReviewComment({
+          owner,
+          repo,
+          pull_number: prNumber,
+          commit_id,
+          path: comment.path,
+          position: comment.position,
+          body: comment.body,
+        });
+      }
+    }
   }
 
 
