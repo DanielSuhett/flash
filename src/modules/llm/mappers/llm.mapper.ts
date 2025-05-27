@@ -84,7 +84,7 @@ CRITICAL ISSUES:
 - Data validation gaps
 
 OUTPUT FORMAT:
-1. What changed (1-2 sentences)
+1. What changed
 2. Critical issues (if any)
 3. Approval status
 4. Explain what PR do
@@ -92,7 +92,11 @@ OUTPUT FORMAT:
 6. Explain how it affects the codebase
 
 CHANGES:
-${prSummary}`,
+${prSummary}
+
+CODEBASE:
+${markdownCodebase.content}
+`,
       }
     ];
   }
@@ -105,12 +109,25 @@ RULES:
 2. Keep code blocks unchanged
 3. Keep file paths unchanged
 4. Keep error messages in English
+5. Reduce repetition — avoid redundant or overly descriptive comments.
+6. Don't include recommendations
+7. Highlight only relevant critiques — ignore style, visual organization, or non-critical suggestions.
+8. Be objective and pragmatic — focus on what affects behavior, logic, maintainability, or reliability.
+9. Ignore “nice to have” or out-of-scope improvements.
+10. Do not overpraise — if needed, summarize positives in a single line at the end.
 
-STRUCTURE:
-1. Changes summary
-2. Critical issues (skip if none)
-3. Technical impact
-4. Approval status
+EXPECTED OUTPUT:
+# Flash Review
+
+## Main Changes
+(Summarize the key changes introduced by the PR)
+
+## Critical Issues
+(Logic errors, runtime failures, incorrect behavior)
+
+## Risks
+(Potential fragility or areas requiring future attention)
+
 
 ORIGINAL:
 ${content}`;

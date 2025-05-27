@@ -100,7 +100,7 @@ export class WorkflowService {
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    return `# Flash Review Summary\n\n${reviewResult.summary}\n\n`;
+    return `# Flash Review \n\n${reviewResult.summary}\n\n`;
   }
 
   private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
