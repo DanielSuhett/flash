@@ -38958,101 +38958,64 @@ class LlmMapper {
                 text: `
 You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs and logic errors.
 
-## Review Structure:
-1. **Function Analysis**: Analyze ONLY the functions directly related to the changes
-2. **Critical Runtime Issues**: Bugs that will cause runtime failures or incorrect behavior
-3. **Logic Validation**: Verify business logic correctness within the context of changed functions
-4. **Approval Recommendation**: Approve only if no critical issues exist
+RULES:
+1. Only analyze modified functions and their direct dependencies
+2. Only flag issues that cause runtime failures or incorrect behavior
+3. No style, docs, or non-critical suggestions
+4. No out-of-scope improvements
+5. No "nice to have" suggestions
 
-## Focus Areas (${appType ?? 'fullstack'} application):
-**CRITICAL ISSUES (must fix before approval):**
-- Runtime errors and exceptions in modified functions
-- Logic bugs that produce incorrect results
-- Null/undefined access without proper validation
-- Missing error handling for critical paths
-- Missing function implementations or undefined references
-- Incorrect API usage or parameter passing
-- Data validation gaps that could cause failures
+CRITICAL ISSUES:
+- Runtime errors
+- Logic bugs affecting output
+- Null/undefined access
+- Missing error handling
+- Incorrect API usage
+- Data validation gaps
 
-**IGNORE:**
-- Code style and formatting
-- Documentation quality
-- Performance optimizations (unless causing bugs)
-- Type 'any' usage
-- Code organization preferences
-- Functions not directly related to changes
-- Imported files that aren't modified
-- Test files and configurations
+OUTPUT FORMAT:
+1. What changed (1-2 sentences)
+2. Critical issues (if any)
+3. Approval status
+4. Explain what PR do
+5. Explain why it's important
+6. Explain how it affects the codebase
 
-## Function Analysis Requirements:
-- Only analyze functions that are:
-  1. Directly modified in the PR
-  2. Called by modified functions
-  3. Calling the modified functions
-- For each relevant function:
-  1. Verify input validation exists where needed
-  2. Check error boundaries and fallback handling
-  3. Ensure async operations handle failures properly
-  4. Validate data transformations are correct
-  5. Confirm edge cases are handled
-
-## Output Requirements:
-- For each analyzed function:
-  1. Explain WHAT the function does
-  2. Justify WHY the changes were necessary
-  3. Describe HOW it affects system behavior
-- Only flag issues that cause runtime problems or logic errors
-- Provide specific file locations and line numbers for issues
-- If no critical issues found in analyzed functions, approve the PR
-
-## Changes to Review:
+CHANGES:
 ${prSummary}`,
             }
         ];
     }
     static buildTranslationPrompt(content, targetLanguage) {
-        return `You are a senior code reviewer. Based on the following code review, generate a comprehensive markdown document in ${targetLanguage}.
+        return `Translate this code review markdown to ${targetLanguage}.
 
-IMPORTANT GUIDELINES:
-1. Structure the document with these sections:
-   - Summary of changes
-   - Critical issues (if any)
-   - Important improvements
-   - Technical details
-   - Impact analysis
-   - Recommendations
+RULES:
+1. Keep technical terms in English
+2. Keep code blocks unchanged
+3. Keep file paths unchanged
+4. Keep error messages in English
 
-2. FORMAT RULES:
-   - Keep all code blocks, file paths, and technical terms in English
-   - Use markdown formatting for better readability
-   - Use emojis appropriately to highlight important points
-   - Keep the Flash Review watermark in English
+STRUCTURE:
+1. Changes summary
+2. Critical issues (skip if none)
+3. Technical impact
+4. Approval status
 
-3. CONTENT RULES:
-   - Maintain all technical information from the original review
-   - Explain issues and suggestions clearly in ${targetLanguage}
-   - Include file locations and code references as is
-   - Keep error messages and code snippets in English
-   - Preserve all critical and important suggestions
-   - Add context that would be helpful for ${targetLanguage} speakers
-
-ORIGINAL REVIEW:
-${content}
-
-Generate a well-structured, professional review in ${targetLanguage} that maintains all technical accuracy while being culturally appropriate.`;
+ORIGINAL:
+${content}`;
     }
     static buildPRSummary(pullRequest) {
-        let summary = `Title: ${pullRequest.title}\n`;
-        if (pullRequest.body) {
-            summary += `Description: ${pullRequest.body}\n\n`;
+        let summary = `${pullRequest.title}\n`;
+        if (pullRequest.body?.trim()) {
+            summary += `${pullRequest.body}\n\n`;
         }
         for (const file of pullRequest.files) {
-            summary += `\nFile: ${file.filename} (${file.status}, +${file.additions}, -${file.deletions})\n`;
+            summary += `\n${file.filename} (${file.status}, +${file.additions}, -${file.deletions})\n`;
             if (file.status === 'modified' && file.patch) {
-                summary += `Changes:\n\`\`\`diff\n${file.patch}\`\`\`\n`;
+                summary += `\`\`\`diff\n${file.patch}\`\`\`\n`;
             }
             if (file.status === 'added' && file.contents) {
-                summary += `New File Content:\n\`\`\`typescript\n${file.contents}\`\`\`\n`;
+                summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
             }
         }
         return summary;
