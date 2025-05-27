@@ -119,9 +119,35 @@ You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs an
   }
 
   static buildTranslationPrompt(content: string, targetLanguage: string): string {
-    return `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
+    return `You are a senior code reviewer. Based on the following code review, generate a comprehensive markdown document in ${targetLanguage}.
 
-${content}`;
+IMPORTANT GUIDELINES:
+1. Structure the document with these sections:
+   - Summary of changes
+   - Critical issues (if any)
+   - Important improvements
+   - Technical details
+   - Impact analysis
+   - Recommendations
+
+2. FORMAT RULES:
+   - Keep all code blocks, file paths, and technical terms in English
+   - Use markdown formatting for better readability
+   - Use emojis appropriately to highlight important points
+   - Keep the Flash Review watermark in English
+
+3. CONTENT RULES:
+   - Maintain all technical information from the original review
+   - Explain issues and suggestions clearly in ${targetLanguage}
+   - Include file locations and code references as is
+   - Keep error messages and code snippets in English
+   - Preserve all critical and important suggestions
+   - Add context that would be helpful for ${targetLanguage} speakers
+
+ORIGINAL REVIEW:
+${content}
+
+Generate a well-structured, professional review in ${targetLanguage} that maintains all technical accuracy while being culturally appropriate.`;
   }
   private static buildPRSummary(pullRequest: PullRequestInfo): string {
     let summary = `Title: ${pullRequest.title}\n`;
@@ -163,9 +189,9 @@ ${content}`;
     return jsonMatch[1];
   }
 
-  static parseReviewResponse(text: LlmResponse): CodeReviewResponse {
+  static parseReviewResponse(response: LlmResponse): CodeReviewResponse {
     try {
-      const cleanJson = this.parseJsonResponse(text.content);
+      const cleanJson = this.parseJsonResponse(response.content);
       const result = JSON.parse(cleanJson);
 
       if (
@@ -175,8 +201,8 @@ ${content}`;
         !Array.isArray(result.issues.performance) ||
         !Array.isArray(result.issues.typescript) ||
         typeof result.approvalRecommended !== 'boolean' ||
-        !Array.isArray(result.suggestions.critical) ||
-        !Array.isArray(result.suggestions.important)
+        !Array.isArray(result.suggestions?.critical) ||
+        !Array.isArray(result.suggestions?.important)
       ) {
         return {
           issues: {
@@ -184,24 +210,22 @@ ${content}`;
             performance: [],
             typescript: [],
           },
-          summary: text.content.slice(0, 500),
+          summary: response.content.slice(0, 500),
           approvalRecommended: false,
           suggestions: {
             critical: [],
             important: [],
           },
-          usageMetadata: text.usage,
+          usageMetadata: response.usage,
         };
       }
 
-      const { issues, summary, approvalRecommended, suggestions } = result;
-
       return {
-        issues,
-        summary,
-        approvalRecommended,
-        suggestions,
-        usageMetadata: text.usage,
+        issues: result.issues,
+        summary: result.summary,
+        approvalRecommended: result.approvalRecommended,
+        suggestions: result.suggestions,
+        usageMetadata: response.usage,
       };
     } catch (error) {
       return {
@@ -210,13 +234,13 @@ ${content}`;
           performance: [],
           typescript: [],
         },
-        summary: text.content.slice(0, 500),
+        summary: response.content.slice(0, 500),
         approvalRecommended: false,
         suggestions: {
           critical: [],
           important: [],
         },
-        usageMetadata: text.usage,
+        usageMetadata: response.usage,
       };
     }
   }

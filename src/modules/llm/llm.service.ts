@@ -12,7 +12,7 @@ export class LlmService {
     appType: 'frontend' | 'backend' | 'fullstack'
   ): Promise<CodeReviewResponse> {
     const prompt = LlmMapper.buildReviewPrompt(markdownCodebase, pullRequest, appType);
-    const response = await this.llmRepository.generateContent(prompt);
+    const response = await this.llmRepository.generateContent(prompt, true);
 
     return LlmMapper.parseReviewResponse(response);
   }

@@ -45,7 +45,7 @@ export class WorkflowService {
       }
 
       core.info(`Indexed ${markdownCodebase.includedFiles.length} files (${markdownCodebase.tokenCount} tokens)`);
-      
+
       const appType = this.determineAppType(markdownCodebase);
       const reviewResult = await this.llmService.reviewCode(markdownCodebase, prWithContents, appType);
 
@@ -94,10 +94,9 @@ export class WorkflowService {
     const summary = this.buildSummarySection(reviewResult);
     const suggestions = this.buildSuggestionsSection(reviewResult);
     const issues = this.buildIssuesSection(reviewResult);
-    const tokenUsage = this.buildTokenUsageSection(reviewResult);
     const watermark = '\n\n---\n*Reviewed by flash* ✨';
 
-    return `${summary}\n\n${suggestions}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+    return `${summary}\n\n${suggestions}\n\n${issues}\n${watermark}`;
   }
 
   private buildSummarySection(reviewResult: CodeReviewResponse): string {
@@ -110,24 +109,24 @@ export class WorkflowService {
     if (reviewResult.suggestions.critical.length > 0) {
       sections.push(
         '## Critical Issues 🚨\n' +
-          reviewResult.suggestions.critical
-            .map(
-              (suggestion) =>
-                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
-            )
-            .join('\n')
+        reviewResult.suggestions.critical
+          .map(
+            (suggestion) =>
+              `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
+          )
+          .join('\n')
       );
     }
 
     if (reviewResult.suggestions.important.length > 0) {
       sections.push(
         '## Important Improvements ⚠️\n' +
-          reviewResult.suggestions.important
-            .map(
-              (suggestion) =>
-                `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
-            )
-            .join('\n')
+        reviewResult.suggestions.important
+          .map(
+            (suggestion) =>
+              `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
+          )
+          .join('\n')
       );
     }
 
@@ -158,15 +157,18 @@ export class WorkflowService {
     return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
   }
 
-  private buildTokenUsageSection(reviewResult: CodeReviewResponse): string {
+  private buildTokenUsageSection(reviewResult: CodeReviewResponse): void {
     if (!reviewResult.usageMetadata) {
-      return '';
+      return;
     }
 
-    return `## Token Usage
+    core.info(`## Token Usage
 
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
-| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
+| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} 
+| ${reviewResult.usageMetadata.completionTokens} 
+| ${reviewResult.usageMetadata.totalTokens} |`
+    )
   }
 }
