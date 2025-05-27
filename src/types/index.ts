@@ -1,9 +1,8 @@
-import { LlmConfig, IndexConfig } from './config.js';
+import { LlmConfig } from './config.js';
 
 export interface ActionConfig {
   githubToken: string;
   llm: LlmConfig;
-  index: IndexConfig;
   prNumber?: number;
 }
 

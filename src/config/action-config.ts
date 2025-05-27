@@ -9,9 +9,6 @@ export function getActionConfig(): ActionConfig {
       model: core.getInput('gemini-model', { required: false }) || 'gemini-2.5-flash',
       outputLanguage: core.getInput('output-language', { required: false }) || 'en',
       maxTokens: Number(core.getInput('llm-max-tokens', { required: false })) || 5000,
-    },
-    index: {
-      cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
-    },
+    }
   };
 }

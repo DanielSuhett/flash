@@ -1,4 +1,4 @@
-import { PullRequestInfo, MarkdownCodebase } from '../../../types/index.js';
+import { PullRequestInfo } from '../../../types/index.js';
 import { CodeReviewResponse, GeminiResponse, LlmResponse } from '../entities/index.js';
 
 export class LlmMapper {
@@ -58,9 +58,7 @@ export class LlmMapper {
   }
 
   static buildReviewPrompt(
-    markdownCodebase: MarkdownCodebase,
-    pullRequest: PullRequestInfo,
-    appType: string
+    pullRequest: PullRequestInfo
   ): Array<{ text: string }> {
     const prSummary = this.buildPRSummary(pullRequest);
     return [
@@ -84,19 +82,12 @@ CRITICAL ISSUES:
 - Data validation gaps
 
 OUTPUT FORMAT:
-1. What changed
+1. What changed (1-2 sentences)
 2. Critical issues (if any)
 3. Approval status
-4. Explain what PR do
-5. Explain why it's important
-6. Explain how it affects the codebase
 
 CHANGES:
-${prSummary}
-
-CODEBASE:
-${markdownCodebase.content}
-`,
+${prSummary}`,
       }
     ];
   }
@@ -113,7 +104,7 @@ RULES:
 6. Don't include recommendations
 7. Highlight only relevant critiques — ignore style, visual organization, or non-critical suggestions.
 8. Be objective and pragmatic — focus on what affects behavior, logic, maintainability, or reliability.
-9. Ignore “nice to have” or out-of-scope improvements.
+9. Ignore "nice to have" or out-of-scope improvements.
 10. Do not overpraise — if needed, summarize positives in a single line at the end.
 
 EXPECTED OUTPUT:

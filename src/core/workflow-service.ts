@@ -1,10 +1,9 @@
 import * as core from '@actions/core';
-import { ActionConfig, PullRequestInfo, IndexedCodebase } from '../types/index.js';
+import { ActionConfig, PullRequestInfo } from '../types/index.js';
 import { GitHubService } from '../github/github-service.js';
 import { LlmService } from '../modules/llm/llm.service.js';
 import { CodeReviewResponse } from '../modules/llm/entities/index.js';
 import { LlmRepository } from '../modules/llm/llm.repository.js';
-import { MarkdownCodebase } from '../types/index.js';
 
 export class WorkflowService {
   private config: ActionConfig;
@@ -32,22 +31,7 @@ export class WorkflowService {
       const prWithContents = await this.githubService.loadFileContents(pullRequestInfo);
       core.info(`Loaded content for ${prWithContents.files.length} changed files`);
 
-      core.info('Generating markdown codebase representation...');
-      const markdownCodebase = await this.githubService.indexCodebaseAsMarkdown(
-        owner,
-        repo,
-        pullRequestInfo.baseBranch,
-        pullRequestInfo.files.map((f) => f.filename)
-      );
-
-      if (markdownCodebase.includedFiles.length === 0) {
-        throw new Error('No files found in the repository');
-      }
-
-      core.info(`Indexed ${markdownCodebase.includedFiles.length} files (${markdownCodebase.tokenCount} tokens)`);
-
-      const appType = this.determineAppType(markdownCodebase);
-      const reviewResult = await this.llmService.reviewCode(markdownCodebase, prWithContents, appType);
+      const reviewResult = await this.llmService.reviewCode(prWithContents);
 
       core.info('Posting review results...');
       await this.postReviewComment(prWithContents, reviewResult);
@@ -57,20 +41,6 @@ export class WorkflowService {
       core.error(`Error during review process: ${error}`);
       throw error;
     }
-  }
-
-  private determineAppType(codebase: MarkdownCodebase): 'frontend' | 'backend' | 'fullstack' {
-    const hasReactFiles = codebase.includedFiles.some(
-      (file) => file.includes('components') || file.includes('pages') || file.endsWith('.tsx')
-    );
-    const hasServerFiles = codebase.includedFiles.some(
-      (file) =>
-        file.includes('controllers') || file.includes('services') || file.includes('repositories')
-    );
-
-    if (hasReactFiles && hasServerFiles) return 'fullstack';
-    if (hasReactFiles) return 'frontend';
-    return 'backend';
   }
 
   private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {

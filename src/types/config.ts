@@ -7,13 +7,8 @@ export interface LlmConfig {
   outputLanguage?: string;
 }
 
-export interface IndexConfig {
-  cacheEnabled: boolean;
-}
-
 export interface ActionConfig {
   llm: LlmConfig;
-  index: IndexConfig;
   prNumber?: number;
 }
 
