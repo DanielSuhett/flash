@@ -38706,7 +38706,7 @@ class GitHubService {
         }
         return null;
     }
-    async createReview(owner, repo, prNumber, commit_id, body, event, comments) {
+    async createReview(owner, repo, prNumber, commit_id, body, comments) {
         const { data: files } = await this.octokit.pulls.listFiles({
             owner,
             repo,
@@ -38734,17 +38734,7 @@ class GitHubService {
             pull_number: prNumber,
             commit_id,
             body,
-            event,
             comments: validComments,
-        });
-    }
-    async approvePullRequest(owner, repo, prNumber) {
-        await this.octokit.pulls.createReview({
-            owner,
-            repo,
-            pull_number: prNumber,
-            event: 'APPROVE',
-            body: 'Automatically approved based on code review results.',
         });
     }
     async getRepoTree(owner, repo, ref) {
@@ -38899,44 +38889,46 @@ class LlmMapper {
         const prSummary = this.buildPRSummary(pullRequest);
         return [
             {
-                text: ` 
-Review Focus:
-1. A summary of the changes and their impact
-2. A recommendation to approve or request changes
-3. If problem is not related to the PR, suggest but don't put in review criteria
-4. Organized suggestions by category, focusing on problems that need to be addressed:
-   - Critical issues that must be fixed (bugs, potential errors, security vulnerabilities, type errors)
-   - Important improvements related to preventing future bugs or improving code robustness
-   Each suggestion should include:
-   - Category (e.g., 'bug', 'performance', 'security')
-   - File location (file path and line numbers)
-   - Clear explanation of the issue and how to fix it
-   - Whether it's a TypeScript-specific issue
-   - Exclude documentation and comment expectations from review criteria
-   - Exclude type any usage as a issue from review criteria
-5. Pay attention to the following aspects relevant to a ${appType ?? 'fullstack'} application
-6. If a problem is not directly related to the diff in PR, ignore it
-7. If no issues are found, return an empty array for the issues field
-8. Pay special attention (deny approval if):
-     - Type compatibility
-     - Interface implementations and missing methods
-     - Generic type parameter constraints
-     - Type assertions and type guards usage
-     - Union and intersection type correctness
-     - Strict null checks and undefined access
-     - Property access safety and optional chaining
-     - Type inference issues and explicit types
-     - Module import/export consistency
-     - Undefined function references
-     - Missing function implementations
-     - Inconsistent function usage
-     - Runtime errors
-     - Missing imports
-     - Circular dependencies
-9. Reject any PR that contains any critical issues - these must be fixed before approval
-10. Analyze the actual code changes in detail, not just the structure
-11. Consider the context of the changes in relation to the rest of the codebase
-12. Check for proper error handling and edge cases
+                text: `
+You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs and logic errors.
+
+## Review Structure:
+1. **Change Analysis**: Explain WHAT changed, WHY it changed, and HOW it impacts the system
+2. **Critical Runtime Issues**: Bugs that will cause runtime failures or incorrect behavior
+3. **Logic Validation**: Verify business logic correctness within the context of changes
+4. **Approval Recommendation**: Approve only if no critical issues exist
+
+## Focus Areas (${appType ?? 'fullstack'} application):
+**CRITICAL ISSUES (must fix before approval):**
+- Runtime errors and exceptions
+- Logic bugs that produce incorrect results
+- Null/undefined access without proper validation
+- Missing error handling for critical paths
+- Missing function implementations or undefined references
+- Incorrect API usage or parameter passing
+- Data validation gaps that could cause failures
+
+**IGNORE (not review criteria):**
+- Code style and formatting
+- Documentation quality
+- Performance optimizations (unless causing bugs)
+- Type 'any' usage
+- Code organization preferences
+
+## Validation Requirements:
+- Verify input validation exists where needed
+- Check error boundaries and fallback handling  
+- Ensure async operations handle failures properly
+- Validate data transformations are correct
+- Confirm edge cases are handled
+
+## Output Requirements:
+- Clearly explain WHAT each change does
+- Justify WHY each change was necessary
+- Describe HOW it affects system behavior
+- Only flag issues that cause runtime problems or logic errors
+- Provide specific file locations and line numbers for issues
+- If no critical issues found, approve the PR
 `,
             },
             {
@@ -39093,7 +39085,7 @@ class LlmRepository {
         if (!this.config?.apiKey) {
             throw new Error('Gemini API key is required');
         }
-        const model = this.config?.model || 'gemini-2.0-flash';
+        const model = this.config?.model || 'gemini-2.5-flash';
         const endpoint = this.mapper.buildGeminiEndpoint(model);
         const response = await this.executeRequest(endpoint, prompt, returnJSON);
         if (!response.ok) {
@@ -39190,8 +39182,7 @@ class WorkflowService {
         if (this.config.llm.outputLanguage && this.config.llm.outputLanguage !== 'en') {
             comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
         }
-        const event = reviewResult.approvalRecommended ? 'APPROVE' : 'REQUEST_CHANGES';
-        await this.githubService.createReview(pullRequest.owner, pullRequest.repo, pullRequest.prNumber, pullRequest.headSha, comment, event);
+        await this.githubService.createReview(pullRequest.owner, pullRequest.repo, pullRequest.prNumber, pullRequest.headSha, comment);
     }
     buildReviewComment(reviewResult) {
         const summary = this.buildSummarySection(reviewResult);
@@ -39259,12 +39250,9 @@ function getActionConfig() {
         githubToken: core.getInput('github-token', { required: true }),
         llm: {
             apiKey: core.getInput('gemini-api-key', { required: true }),
-            model: core.getInput('gemini-model', { required: false }) || 'gemini-2.0-flash',
+            model: core.getInput('gemini-model', { required: false }) || 'gemini-2.5-flash',
             outputLanguage: core.getInput('output-language', { required: false }) || 'en',
             maxTokens: Number(core.getInput('llm-max-tokens', { required: false })) || 5000,
-        },
-        review: {
-            autoApprove: core.getBooleanInput('auto-approve', { required: false }),
         },
         index: {
             cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),
