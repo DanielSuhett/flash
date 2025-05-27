@@ -1,6 +1,6 @@
 {
   "name": "flash",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "GitHub Action for deep code review of TypeScript Pull Requests with LLM and Jira integration",
   "main": "dist/index.js",
   "type": "module",

@@ -38554,6 +38554,7 @@ var ignore_default = /*#__PURE__*/__nccwpck_require__.n(ignore);
 class GitHubService {
     octokit;
     MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    MAX_FILE_SIZE_PER_FILE = 100 * 1024; // 100KB
     DEFAULT_IGNORES = [
         'node_modules',
         'dist',
@@ -38562,7 +38563,26 @@ class GitHubService {
         '*.log',
         '.DS_Store',
         'coverage',
-        'build'
+        'build',
+        'test',
+        'tests',
+        '__tests__',
+        '__mocks__',
+        '*.test.*',
+        '*.spec.*',
+        '*.min.*',
+        '*.map',
+        'public',
+        'assets',
+        'images',
+        'img',
+        'docs',
+        '.next',
+        '.cache',
+        '.husky',
+        '.github',
+        'vendor',
+        'third-party'
     ];
     constructor(token) {
         this.octokit = new dist_node.Octokit({
@@ -38772,12 +38792,29 @@ class GitHubService {
         }
     }
     isTextFile(filename) {
-        const textExtensions = ['.ts', '.js', '.json', '.md', '.yml', '.yaml', '.txt', '.html', '.css', '.scss', '.jsx', '.tsx'];
-        return textExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+        const textExtensions = [
+            '.ts',
+            '.tsx',
+            '.js',
+            '.jsx',
+            '.json',
+            '.md',
+            '.yml',
+            '.yaml'
+        ];
+        const path = filename.toLowerCase();
+        return textExtensions.some(ext => path.endsWith(ext)) &&
+            !path.includes('.min.') &&
+            !path.includes('.d.ts') &&
+            !path.endsWith('.test.ts') &&
+            !path.endsWith('.spec.ts');
+    }
+    exceedsFileSizeLimit(content) {
+        return content.length > this.MAX_FILE_SIZE_PER_FILE;
     }
     shouldIgnoreFile(path) {
         const ignoreFilter = ignore_default()["default"]().add(this.DEFAULT_IGNORES);
-        return ignoreFilter.ignores(path);
+        return ignoreFilter.ignores(path) || path.split('/').some(part => part.startsWith('.'));
     }
     removeWhitespace(content, filename) {
         const whitespaceDependent = ['.md', '.yml', '.yaml'];
@@ -38792,55 +38829,69 @@ class GitHubService {
         let ignoredCount = 0;
         let binaryCount = 0;
         let totalSize = 0;
+        let skippedDueToSize = 0;
         const files = await this.getRepoTree(owner, repo, ref);
-        const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
-        const prioritizedSet = new Set(prioritizedFiles);
-        const prioritizedItems = sortedFiles.filter(f => prioritizedSet.has(f.path));
-        const remainingItems = sortedFiles.filter(f => !prioritizedSet.has(f.path));
-        const processOrder = [...prioritizedItems, ...remainingItems];
-        for (const file of processOrder) {
+        const filesToProcess = files.filter(f => prioritizedFiles.includes(f.path));
+        for (const file of filesToProcess) {
             if (this.shouldIgnoreFile(file.path)) {
                 ignoredCount++;
                 continue;
             }
-            if (file.type === 'blob') {
-                if (this.isTextFile(file.path)) {
-                    try {
-                        const content = await this.getFileContent(owner, repo, file.path, ref);
-                        if (content) {
-                            const processedContent = this.removeWhitespace(content, file.path);
-                            const extension = file.path.split('.').pop() || '';
-                            output += `# ${file.path}\n\n`;
-                            output += `\`\`\`${extension}\n`;
-                            output += processedContent;
-                            output += '\n\`\`\`\n\n';
-                            includedFiles.push(file.path);
-                            totalSize += processedContent.length;
-                        }
+            if (file.type === 'blob' && this.isTextFile(file.path)) {
+                try {
+                    const content = await this.getFileContent(owner, repo, file.path, ref);
+                    if (!content)
+                        continue;
+                    if (this.exceedsFileSizeLimit(content)) {
+                        skippedDueToSize++;
+                        core.debug(`Skipping ${file.path} due to size limit (${content.length} bytes)`);
+                        continue;
                     }
-                    catch (error) {
-                        core.warning(`Failed to process ${file.path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                    }
-                }
-                else {
+                    const relevantContent = this.extractRelevantFunctions(content);
+                    if (!relevantContent)
+                        continue;
+                    const processedContent = this.removeWhitespace(relevantContent, file.path);
+                    const extension = file.path.split('.').pop() || '';
                     output += `# ${file.path}\n\n`;
-                    output += `This is a binary file.\n\n`;
-                    binaryCount++;
+                    output += `\`\`\`${extension}\n`;
+                    output += processedContent;
+                    output += '\n\`\`\`\n\n';
+                    includedFiles.push(file.path);
+                    totalSize += processedContent.length;
+                    if (totalSize > this.MAX_FILE_SIZE) {
+                        core.warning('Maximum total size exceeded. Some files may be omitted.');
+                        break;
+                    }
+                }
+                catch (error) {
+                    core.warning(`Failed to process ${file.path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 }
             }
-            if (totalSize > this.MAX_FILE_SIZE) {
-                core.warning('Maximum file size exceeded. Some files may be omitted.');
-                break;
+            else {
+                binaryCount++;
             }
+        }
+        if (skippedDueToSize > 0) {
+            core.info(`Skipped ${skippedDueToSize} files due to individual size limits`);
         }
         return {
             content: output,
             includedFiles,
             totalFiles: files.length,
-            ignoredFiles: ignoredCount,
+            ignoredFiles: ignoredCount + skippedDueToSize,
             binaryFiles: binaryCount,
             tokenCount: Math.ceil(totalSize / 4)
         };
+    }
+    extractRelevantFunctions(content) {
+        const functionRegex = /(?:export\s+)?(?:async\s+)?(?:function|const)\s+\w+\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{]*?)?\s*{[^}]*}/gs;
+        const classMethodRegex = /(?:public|private|protected|async)?\s*\w+\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{]*?)?\s*{[^}]*}/gs;
+        const functions = [...content.matchAll(functionRegex)].map(m => m[0]);
+        const methods = [...content.matchAll(classMethodRegex)].map(m => m[0]);
+        const allFunctions = [...functions, ...methods];
+        if (allFunctions.length === 0)
+            return null;
+        return allFunctions.join('\n\n');
     }
 }
 
@@ -38908,14 +38959,14 @@ class LlmMapper {
 You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs and logic errors.
 
 ## Review Structure:
-1. **Change Analysis**: Explain WHAT changed, WHY it changed, and HOW it impacts the system
+1. **Function Analysis**: Analyze ONLY the functions directly related to the changes
 2. **Critical Runtime Issues**: Bugs that will cause runtime failures or incorrect behavior
-3. **Logic Validation**: Verify business logic correctness within the context of changes
+3. **Logic Validation**: Verify business logic correctness within the context of changed functions
 4. **Approval Recommendation**: Approve only if no critical issues exist
 
 ## Focus Areas (${appType ?? 'fullstack'} application):
 **CRITICAL ISSUES (must fix before approval):**
-- Runtime errors and exceptions
+- Runtime errors and exceptions in modified functions
 - Logic bugs that produce incorrect results
 - Null/undefined access without proper validation
 - Missing error handling for critical paths
@@ -38923,37 +38974,40 @@ You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs an
 - Incorrect API usage or parameter passing
 - Data validation gaps that could cause failures
 
-**IGNORE (not review criteria):**
+**IGNORE:**
 - Code style and formatting
 - Documentation quality
 - Performance optimizations (unless causing bugs)
 - Type 'any' usage
 - Code organization preferences
+- Functions not directly related to changes
+- Imported files that aren't modified
+- Test files and configurations
 
-## Validation Requirements:
-- Verify input validation exists where needed
-- Check error boundaries and fallback handling  
-- Ensure async operations handle failures properly
-- Validate data transformations are correct
-- Confirm edge cases are handled
+## Function Analysis Requirements:
+- Only analyze functions that are:
+  1. Directly modified in the PR
+  2. Called by modified functions
+  3. Calling the modified functions
+- For each relevant function:
+  1. Verify input validation exists where needed
+  2. Check error boundaries and fallback handling
+  3. Ensure async operations handle failures properly
+  4. Validate data transformations are correct
+  5. Confirm edge cases are handled
 
 ## Output Requirements:
-- Clearly explain WHAT each change does
-- Justify WHY each change was necessary
-- Describe HOW it affects system behavior
+- For each analyzed function:
+  1. Explain WHAT the function does
+  2. Justify WHY the changes were necessary
+  3. Describe HOW it affects system behavior
 - Only flag issues that cause runtime problems or logic errors
 - Provide specific file locations and line numbers for issues
-- If no critical issues found, approve the PR
-`,
-            },
-            {
-                text: `Here's a summary of the PR changes:
-    ${prSummary}`,
-            },
-            {
-                text: `Here's the codebase structure context:
-    ${markdownCodebase.content}`,
-            },
+- If no critical issues found in analyzed functions, approve the PR
+
+## Changes to Review:
+${prSummary}`,
+            }
         ];
     }
     static buildTranslationPrompt(content, targetLanguage) {
@@ -38989,20 +39043,16 @@ Generate a well-structured, professional review in ${targetLanguage} that mainta
     }
     static buildPRSummary(pullRequest) {
         let summary = `Title: ${pullRequest.title}\n`;
-        summary += `Description: ${pullRequest.body || 'No description'}\n\n`;
-        summary += `Changed Files:\n`;
+        if (pullRequest.body) {
+            summary += `Description: ${pullRequest.body}\n\n`;
+        }
         for (const file of pullRequest.files) {
-            summary += `\n${file.filename} (${file.status}, +${file.additions}, -${file.deletions}):\n`;
-            if (file.contents) {
-                summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
+            summary += `\nFile: ${file.filename} (${file.status}, +${file.additions}, -${file.deletions})\n`;
+            if (file.status === 'modified' && file.patch) {
+                summary += `Changes:\n\`\`\`diff\n${file.patch}\`\`\`\n`;
             }
-            summary += `\nChanges in this file:\n`;
-            if (file.patch) {
-                summary += `\`\`\`diff\n${file.patch}\`\`\`\n`;
-            }
-            summary += `\nContent in this file:\n`;
-            if (file.contents) {
-                summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
+            if (file.status === 'added' && file.contents) {
+                summary += `New File Content:\n\`\`\`typescript\n${file.contents}\`\`\`\n`;
             }
         }
         return summary;
