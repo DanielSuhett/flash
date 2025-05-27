@@ -6,12 +6,9 @@ export function getActionConfig(): ActionConfig {
     githubToken: core.getInput('github-token', { required: true }),
     llm: {
       apiKey: core.getInput('gemini-api-key', { required: true }),
-      model: core.getInput('gemini-model', { required: false }) || 'gemini-2.0-flash',
+      model: core.getInput('gemini-model', { required: false }) || 'gemini-2.5-flash',
       outputLanguage: core.getInput('output-language', { required: false }) || 'en',
       maxTokens: Number(core.getInput('llm-max-tokens', { required: false })) || 5000,
-    },
-    review: {
-      autoApprove: core.getBooleanInput('auto-approve', { required: false }),
     },
     index: {
       cacheEnabled: core.getBooleanInput('index-cache-enabled', { required: false }),

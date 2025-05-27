@@ -7,18 +7,12 @@ export interface LlmConfig {
   outputLanguage?: string;
 }
 
-
-export interface ReviewConfig {
-  autoApprove: boolean;
-}
-
 export interface IndexConfig {
   cacheEnabled: boolean;
 }
 
 export interface ActionConfig {
   llm: LlmConfig;
-  review: ReviewConfig;
   index: IndexConfig;
   prNumber?: number;
 }

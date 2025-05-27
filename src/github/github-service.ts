@@ -210,7 +210,6 @@ export class GitHubService {
     prNumber: number,
     commit_id: string,
     body: string,
-    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT',
     comments?: {
       path: string;
       position: number;
@@ -252,20 +251,10 @@ export class GitHubService {
       pull_number: prNumber,
       commit_id,
       body,
-      event,
       comments: validComments,
     });
   }
 
-  async approvePullRequest(owner: string, repo: string, prNumber: number): Promise<void> {
-    await this.octokit.pulls.createReview({
-      owner,
-      repo,
-      pull_number: prNumber,
-      event: 'APPROVE',
-      body: 'Automatically approved based on code review results.',
-    });
-  }
 
   private async getRepoTree(
     owner: string,
