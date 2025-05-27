@@ -38953,9 +38953,35 @@ You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs an
         ];
     }
     static buildTranslationPrompt(content, targetLanguage) {
-        return `Translate the following text to ${targetLanguage}. Keep all code blocks, markdown formatting, and technical terms in English. Only translate the natural language parts:
+        return `You are a senior code reviewer. Based on the following code review, generate a comprehensive markdown document in ${targetLanguage}.
 
-${content}`;
+IMPORTANT GUIDELINES:
+1. Structure the document with these sections:
+   - Summary of changes
+   - Critical issues (if any)
+   - Important improvements
+   - Technical details
+   - Impact analysis
+   - Recommendations
+
+2. FORMAT RULES:
+   - Keep all code blocks, file paths, and technical terms in English
+   - Use markdown formatting for better readability
+   - Use emojis appropriately to highlight important points
+   - Keep the Flash Review watermark in English
+
+3. CONTENT RULES:
+   - Maintain all technical information from the original review
+   - Explain issues and suggestions clearly in ${targetLanguage}
+   - Include file locations and code references as is
+   - Keep error messages and code snippets in English
+   - Preserve all critical and important suggestions
+   - Add context that would be helpful for ${targetLanguage} speakers
+
+ORIGINAL REVIEW:
+${content}
+
+Generate a well-structured, professional review in ${targetLanguage} that maintains all technical accuracy while being culturally appropriate.`;
     }
     static buildPRSummary(pullRequest) {
         let summary = `Title: ${pullRequest.title}\n`;
@@ -38988,9 +39014,9 @@ ${content}`;
         }
         return jsonMatch[1];
     }
-    static parseReviewResponse(text) {
+    static parseReviewResponse(response) {
         try {
-            const cleanJson = this.parseJsonResponse(text.content);
+            const cleanJson = this.parseJsonResponse(response.content);
             const result = JSON.parse(cleanJson);
             if (!result.summary ||
                 !result.issues ||
@@ -38998,30 +39024,29 @@ ${content}`;
                 !Array.isArray(result.issues.performance) ||
                 !Array.isArray(result.issues.typescript) ||
                 typeof result.approvalRecommended !== 'boolean' ||
-                !Array.isArray(result.suggestions.critical) ||
-                !Array.isArray(result.suggestions.important)) {
+                !Array.isArray(result.suggestions?.critical) ||
+                !Array.isArray(result.suggestions?.important)) {
                 return {
                     issues: {
                         security: [],
                         performance: [],
                         typescript: [],
                     },
-                    summary: text.content.slice(0, 500),
+                    summary: response.content.slice(0, 500),
                     approvalRecommended: false,
                     suggestions: {
                         critical: [],
                         important: [],
                     },
-                    usageMetadata: text.usage,
+                    usageMetadata: response.usage,
                 };
             }
-            const { issues, summary, approvalRecommended, suggestions } = result;
             return {
-                issues,
-                summary,
-                approvalRecommended,
-                suggestions,
-                usageMetadata: text.usage,
+                issues: result.issues,
+                summary: result.summary,
+                approvalRecommended: result.approvalRecommended,
+                suggestions: result.suggestions,
+                usageMetadata: response.usage,
             };
         }
         catch (error) {
@@ -39031,13 +39056,13 @@ ${content}`;
                     performance: [],
                     typescript: [],
                 },
-                summary: text.content.slice(0, 500),
+                summary: response.content.slice(0, 500),
                 approvalRecommended: false,
                 suggestions: {
                     critical: [],
                     important: [],
                 },
-                usageMetadata: text.usage,
+                usageMetadata: response.usage,
             };
         }
     }
@@ -39069,7 +39094,7 @@ class LlmService {
     }
     async reviewCode(markdownCodebase, pullRequest, appType) {
         const prompt = LlmMapper.buildReviewPrompt(markdownCodebase, pullRequest, appType);
-        const response = await this.llmRepository.generateContent(prompt);
+        const response = await this.llmRepository.generateContent(prompt, true);
         return LlmMapper.parseReviewResponse(response);
     }
     async translateText(content, targetLanguage) {
@@ -39197,9 +39222,8 @@ class WorkflowService {
         const summary = this.buildSummarySection(reviewResult);
         const suggestions = this.buildSuggestionsSection(reviewResult);
         const issues = this.buildIssuesSection(reviewResult);
-        const tokenUsage = this.buildTokenUsageSection(reviewResult);
         const watermark = '\n\n---\n*Reviewed by flash* ✨';
-        return `${summary}\n\n${suggestions}\n\n${issues}\n\n${tokenUsage}${watermark}`;
+        return `${summary}\n\n${suggestions}\n\n${issues}\n${watermark}`;
     }
     buildSummarySection(reviewResult) {
         return `# Flash Review Summary\n\n${reviewResult.summary}\n\n`;
@@ -39235,13 +39259,15 @@ class WorkflowService {
     }
     buildTokenUsageSection(reviewResult) {
         if (!reviewResult.usageMetadata) {
-            return '';
+            return;
         }
-        return `## Token Usage
+        core.info(`## Token Usage
 
 | Model | Prompt Tokens | Completion Tokens | Total Tokens |
 |-------|--------------|-------------------|--------------|
-| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} | ${reviewResult.usageMetadata.completionTokens} | ${reviewResult.usageMetadata.totalTokens} |`;
+| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} 
+| ${reviewResult.usageMetadata.completionTokens} 
+| ${reviewResult.usageMetadata.totalTokens} |`);
     }
 }
 
