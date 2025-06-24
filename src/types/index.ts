@@ -59,18 +59,8 @@ export interface CodeReviewRequest {
   pullRequest: PullRequestInfo;
 }
 
-export interface CodeReviewResult {
+export interface PullRequestSummaryResult {
   summary: string;
-  overallQuality: number;
-  approvalRecommended: boolean;
-  comments: {
-    file: string;
-    startLine: number;
-    endLine: number;
-    severity: 'error' | 'warning' | 'info' | 'suggestion';
-    category: string;
-    message: string;
-  }[];
 }
 
 export interface CodeReviewComment {

@@ -1,26 +1,20 @@
 import { PullRequestInfo } from '../../types/index.js';
 import { LlmMapper } from './mappers/llm.mapper.js';
 import { LlmRepository } from './llm.repository.js';
-import { CodeReviewResponse } from './entities/index.js';
+import { PullRequestSummaryResponse } from './entities/index.js';
 
 export class LlmService {
   constructor(private readonly llmRepository: LlmRepository) {}
 
-  async reviewCode(pullRequest: PullRequestInfo): Promise<CodeReviewResponse> {
-    const prompt = LlmMapper.buildReviewPrompt(pullRequest);
-    const response = await this.llmRepository.generateContent(prompt, true);
+  async summarizePullRequest(
+    pullRequest: PullRequestInfo,
+    outputLanguage: string = 'en',
+    commitMessages: string[] = []
+  ): Promise<PullRequestSummaryResponse> {
+    const prompt = LlmMapper.buildSummaryPrompt(pullRequest, commitMessages);
+    const systemInstruction = LlmMapper.getSummarySystemInstruction(outputLanguage);
+    const response = await this.llmRepository.generateContent(prompt, false, systemInstruction);
 
-    return LlmMapper.parseReviewResponse(response);
-  }
-
-  async translateText(content: string, targetLanguage: string): Promise<string> {
-    if (targetLanguage.toLowerCase() === 'en') {
-      return content;
-    }
-
-    const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
-    const response = await this.llmRepository.generateContent([{ text: prompt }], false);
-
-    return response.content;
+    return LlmMapper.parseSummaryResponse(response);
   }
 }

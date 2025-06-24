@@ -1,5 +1,3 @@
-import { CodeReviewResult } from './index.js';
-
 export interface LlmConfig {
   apiKey: string;
   model: string;
@@ -17,7 +15,7 @@ export interface ReviewResult {
   suggestions: string[];
   securityIssues: string[];
   performanceIssues: string[];
-  review?: CodeReviewResult;
+  review?: any;
   tokenUsage?: {
     model: string;
     promptTokens: number;

@@ -129,23 +129,29 @@ export class GitHubService {
   async loadFileContents(pullRequestInfo: PullRequestInfo): Promise<PullRequestInfo> {
     const { owner, repo, baseBranch, headBranch, files } = pullRequestInfo;
 
+    const MAX_ADDITIONS_FOR_FULL_CONTENT = 800;
+
     const filesWithContent = await Promise.all(
       files.map(async (file) => {
-        if (file.status !== 'removed') {
-          const branchToUse = file.status === 'added' ? headBranch : baseBranch;
-          let content = await this.getFileContent(owner, repo, file.filename, branchToUse);
-          
-          if (!content && file.status === 'modified') {
-            content = await this.getFileContent(owner, repo, file.filename, baseBranch);
-          }
-
-          return {
-            ...file,
-            contents: content || undefined,
-          };
+        if (file.status === 'removed') {
+          return file;
         }
 
-        return file;
+        if (file.status === 'added' && file.additions > MAX_ADDITIONS_FOR_FULL_CONTENT) {
+          return file;
+        }
+
+        const branchToUse = file.status === 'added' ? headBranch : baseBranch;
+        let content = await this.getFileContent(owner, repo, file.filename, branchToUse);
+        
+        if (!content && file.status === 'modified') {
+          content = await this.getFileContent(owner, repo, file.filename, baseBranch);
+        }
+
+        return {
+          ...file,
+          contents: content || undefined,
+        };
       })
     );
 
@@ -258,6 +264,17 @@ export class GitHubService {
         });
       }
     }
+  }
+
+  async getCommitMessages(owner: string, repo: string, prNumber: number, limit: number = 10): Promise<string[]> {
+    const { data: commits } = await this.octokit.pulls.listCommits({
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: limit,
+    });
+
+    return commits.slice(0, limit).map((commit) => commit.commit.message.split('\n')[0]);
   }
 }
 

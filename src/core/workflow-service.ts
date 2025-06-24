@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import { ActionConfig, PullRequestInfo } from '../types/index.js';
 import { GitHubService } from '../github/github-service.js';
 import { LlmService } from '../modules/llm/llm.service.js';
-import { CodeReviewResponse } from '../modules/llm/entities/index.js';
+import { PullRequestSummaryResponse } from '../modules/llm/entities/index.js';
 import { LlmRepository } from '../modules/llm/llm.repository.js';
 
 export class WorkflowService {
@@ -31,10 +31,20 @@ export class WorkflowService {
       const prWithContents = await this.githubService.loadFileContents(pullRequestInfo);
       core.info(`Loaded content for ${prWithContents.files.length} changed files`);
 
-      const reviewResult = await this.llmService.reviewCode(prWithContents);
+      const commitMessages = await this.githubService.getCommitMessages(owner, repo, prNumber);
 
-      core.info('Posting review results...');
-      await this.postReviewComment(prWithContents, reviewResult);
+      core.info(`Loaded ${commitMessages.length} commit messages`);
+
+      core.info('Generating PR summary...');
+      const outputLanguage = this.config.llm.outputLanguage || 'en';
+      const summaryResult = await this.llmService.summarizePullRequest(
+        prWithContents,
+        outputLanguage,
+        commitMessages
+      );
+
+      core.info('Posting summary comment...');
+      await this.postSummaryComment(prWithContents, summaryResult);
 
       core.info('Code review completed successfully');
     } catch (error) {
@@ -43,102 +53,25 @@ export class WorkflowService {
     }
   }
 
-  private async postReviewComment(pullRequest: PullRequestInfo, reviewResult: CodeReviewResponse): Promise<void> {
-    let comment = this.buildReviewComment(reviewResult);
-
-    if (this.config.llm.outputLanguage && this.config.llm.outputLanguage !== 'en') {
-      comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
-    }
-
+  private async postSummaryComment(
+    pullRequest: PullRequestInfo,
+    summaryResult: PullRequestSummaryResponse
+  ): Promise<void> {
+    const comment = this.buildSummaryComment(summaryResult);
 
     await this.githubService.createReview(
       pullRequest.owner,
       pullRequest.repo,
       pullRequest.prNumber,
       pullRequest.headSha,
-      comment,
+      comment
     );
   }
 
-  private buildReviewComment(reviewResult: CodeReviewResponse): string {
-    const summary = this.buildSummarySection(reviewResult);
-    const suggestions = this.buildSuggestionsSection(reviewResult);
-    const issues = this.buildIssuesSection(reviewResult);
-    const watermark = '\n\n---\n*Reviewed by flash* ✨';
+  private buildSummaryComment(summaryResult: PullRequestSummaryResponse): string {
+    const header = '# ✨ Flash Code Review';
+    const summary = `\n\n${summaryResult.summary}`;
 
-    return `${summary}\n\n${suggestions}\n\n${issues}\n${watermark}`;
-  }
-
-  private buildSummarySection(reviewResult: CodeReviewResponse): string {
-    return `# Flash Review \n\n${reviewResult.summary}\n\n`;
-  }
-
-  private buildSuggestionsSection(reviewResult: CodeReviewResponse): string {
-    const sections = [];
-
-    if (reviewResult.suggestions.critical.length > 0) {
-      sections.push(
-        '## Critical Issues 🚨\n' +
-        reviewResult.suggestions.critical
-          .map(
-            (suggestion) =>
-              `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
-          )
-          .join('\n')
-      );
-    }
-
-    if (reviewResult.suggestions.important.length > 0) {
-      sections.push(
-        '## Important Improvements ⚠️\n' +
-        reviewResult.suggestions.important
-          .map(
-            (suggestion) =>
-              `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`
-          )
-          .join('\n')
-      );
-    }
-
-    return sections.length > 0 ? sections.join('\n\n') : '';
-  }
-
-  private buildIssuesSection(reviewResult: CodeReviewResponse): string {
-    const sections = [];
-
-    if (reviewResult.issues.security.length > 0) {
-      sections.push(
-        `## Security Issues\n${reviewResult.issues.security.map((issue: string) => `- ${issue}`).join('\n')}`
-      );
-    }
-
-    if (reviewResult.issues.performance.length > 0) {
-      sections.push(
-        `## Performance Issues\n${reviewResult.issues.performance.map((issue: string) => `- ${issue}`).join('\n')}`
-      );
-    }
-
-    if (reviewResult.issues.typescript.length > 0) {
-      sections.push(
-        `## TypeScript Issues\n${reviewResult.issues.typescript.map((issue: string) => `- ${issue}`).join('\n')}`
-      );
-    }
-
-    return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
-  }
-
-  private buildTokenUsageSection(reviewResult: CodeReviewResponse): void {
-    if (!reviewResult.usageMetadata) {
-      return;
-    }
-
-    core.info(`## Token Usage
-
-| Model | Prompt Tokens | Completion Tokens | Total Tokens |
-|-------|--------------|-------------------|--------------|
-| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} 
-| ${reviewResult.usageMetadata.completionTokens} 
-| ${reviewResult.usageMetadata.totalTokens} |`
-    )
+    return `${header}${summary}`;
   }
 }
