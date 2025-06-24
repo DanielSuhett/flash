@@ -37970,19 +37970,23 @@ class GitHubService {
     }
     async loadFileContents(pullRequestInfo) {
         const { owner, repo, baseBranch, headBranch, files } = pullRequestInfo;
+        const MAX_ADDITIONS_FOR_FULL_CONTENT = 800;
         const filesWithContent = await Promise.all(files.map(async (file) => {
-            if (file.status !== 'removed') {
-                const branchToUse = file.status === 'added' ? headBranch : baseBranch;
-                let content = await this.getFileContent(owner, repo, file.filename, branchToUse);
-                if (!content && file.status === 'modified') {
-                    content = await this.getFileContent(owner, repo, file.filename, baseBranch);
-                }
-                return {
-                    ...file,
-                    contents: content || undefined,
-                };
+            if (file.status === 'removed') {
+                return file;
             }
-            return file;
+            if (file.status === 'added' && file.additions > MAX_ADDITIONS_FOR_FULL_CONTENT) {
+                return file;
+            }
+            const branchToUse = file.status === 'added' ? headBranch : baseBranch;
+            let content = await this.getFileContent(owner, repo, file.filename, branchToUse);
+            if (!content && file.status === 'modified') {
+                content = await this.getFileContent(owner, repo, file.filename, baseBranch);
+            }
+            return {
+                ...file,
+                contents: content || undefined,
+            };
         }));
         return {
             ...pullRequestInfo,
@@ -38065,10 +38069,35 @@ class GitHubService {
             }
         }
     }
+    async getCommitMessages(owner, repo, prNumber, limit = 10) {
+        const { data: commits } = await this.octokit.pulls.listCommits({
+            owner,
+            repo,
+            pull_number: prNumber,
+            per_page: limit,
+        });
+        return commits.slice(0, limit).map((commit) => commit.commit.message.split('\n')[0]);
+    }
 }
 
 ;// CONCATENATED MODULE: ./src/modules/llm/mappers/llm.mapper.ts
 class LlmMapper {
+    static getSummarySystemInstruction(outputLanguage = 'en') {
+        const languageInstruction = outputLanguage === 'en' ? '' : `Respond in ${outputLanguage}.`;
+        return `You are an expert TypeScript developer analyzing pull requests. 
+    
+    Create a concise technical summary focusing ONLY on:
+    - What this PR accomplishes (based on title and changes)
+    - Key technical implementation details from the actual code changes
+    - Files modified and their purpose
+    - New features, refactorings, or bug fixes implemented
+    
+    Be direct and technical. Ignore any code not directly changed in the PR.
+    Do not mention code review, approval, or issues.
+    ${languageInstruction}
+    
+    Respond with plain markdown text, not JSON.`;
+    }
     static getSystemInstruction() {
         return `You are an expert TypeScript code reviewer with 10 years of experience in developing 
     and reviewing large-scale applications. You specialize in web application development and TypeScript type system.
@@ -38077,82 +38106,38 @@ class LlmMapper {
   1. You MUST respond with ONLY a valid JSON object.
   2. Do not include any markdown formatting, code blocks, or additional text outside the JSON structure.
   3. The response must strictly follow the provided schema.
-  4. If no issues are found, return empty arrays for the 'issues' fields and relevant empty arrays within 'suggestions'.
-  5. Never recommend approval if critical issues are found. Base the 'approvalRecommended' boolean on this rule.
-  6. Pay special attention to TypeScript-specific issues:
-     - Type compatibility
-     - Interface implementations
-     - Generic type parameters
-     - Type assertions and type guards
-     - Union and intersection types
-     - Strict null checks
-     - Type inference issues
-     - Module import/export consistency
+  4. Focus on creating a concise technical summary of the PR changes and their impact.
+  5. Include implementation details, architectural decisions, and technical patterns used.
   
   IMPORTANT: Return ONLY a valid JSON object with this exact structure,
   without any markdown formatting, code blocks, or additional text.
   
   REQUIRED RESPONSE FORMAT:
   {
-    "issues": {
-      "security": string[],
-      "performance": string[],
-      "typescript": string[]
-    },
-    "summary": string,
-    "approvalRecommended": boolean,
-    "suggestions": {
-      "critical": [
-        {
-          "category": string,
-          "file": string,
-          "location": string,
-          "description": string,
-          "typeIssue": boolean
-        }
-      ],
-      "important": [
-        {
-          "category": string,
-          "file": string,
-          "location": string,
-          "description": string,
-          "typeIssue": boolean
-        }
-      ]
-    }
+    "summary": string
   }`;
     }
-    static buildReviewPrompt(pullRequest) {
+    static buildSummaryPrompt(pullRequest, commitMessages = []) {
         const prSummary = this.buildPRSummary(pullRequest);
+        const commitsSection = commitMessages.length
+            ? `Recent commit messages:\n${commitMessages.map((m) => `- ${m}`).join('\n')}`
+            : '';
+        const filesSection = pullRequest.files
+            .map((file) => `- ${file.filename} (${file.status}, +${file.additions}, -${file.deletions})`)
+            .join('\n');
+        const header = `Title: ${pullRequest.title}\n\nChanged files:\n${filesSection}`;
         return [
             {
-                text: `
-You are a senior code reviewer. Analyze this PR focusing ONLY on runtime bugs and logic errors.
+                text: `Analyze the following GitHub pull request.
 
-RULES:
-1. Only analyze modified functions and their direct dependencies
-2. Only flag issues that cause runtime failures or incorrect behavior
-3. No style, docs, or non-critical suggestions
-4. No out-of-scope improvements
-5. No "nice to have" suggestions
+${header}
 
-CRITICAL ISSUES:
-- Runtime errors
-- Logic bugs affecting output
-- Null/undefined access
-- Missing error handling
-- Incorrect API usage
-- Data validation gaps
+${commitsSection}
 
-OUTPUT FORMAT:
-1. What changed (1-2 sentences)
-2. Critical issues (if any)
-3. Approval status
+${prSummary}
 
-CHANGES:
-${prSummary}`,
-            }
+Provide a concise technical summary focusing on purpose, implementation details and potential impact.`,
+            },
         ];
     }
     static buildTranslationPrompt(content, targetLanguage) {
@@ -38187,83 +38172,35 @@ ORIGINAL:
 ${content}`;
     }
     static buildPRSummary(pullRequest) {
-        let summary = `${pullRequest.title}\n`;
+        const MAX_PATCH_LINES = 120;
+        let summary = '';
         if (pullRequest.body?.trim()) {
             summary += `${pullRequest.body}\n\n`;
         }
         for (const file of pullRequest.files) {
             summary += `\n${file.filename} (${file.status}, +${file.additions}, -${file.deletions})\n`;
             if (file.status === 'modified' && file.patch) {
-                summary += `\`\`\`diff\n${file.patch}\`\`\`\n`;
+                const lines = file.patch.split('\n');
+                const trimmedPatch = lines.length > MAX_PATCH_LINES
+                    ? [...lines.slice(0, MAX_PATCH_LINES / 2), '...', ...lines.slice(-MAX_PATCH_LINES / 2)].join('\n')
+                    : file.patch;
+                summary += `\`\`\`diff\n${trimmedPatch}\n\`\`\`\n`;
             }
             if (file.status === 'added' && file.contents) {
-                summary += `\`\`\`typescript\n${file.contents}\`\`\`\n`;
+                const codeLines = file.contents.split('\n');
+                const trimmedContent = codeLines.length > MAX_PATCH_LINES
+                    ? [...codeLines.slice(0, MAX_PATCH_LINES / 2), '...', ...codeLines.slice(-MAX_PATCH_LINES / 2)].join('\n')
+                    : file.contents;
+                summary += `\`\`\`typescript\n${trimmedContent}\n\`\`\`\n`;
             }
         }
         return summary;
     }
-    static parseJsonResponse(text) {
-        const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-        if (!jsonMatch) {
-            const fallbackMatch = text.match(/\{[\s\S]*\}/);
-            if (!fallbackMatch) {
-                throw new Error('No JSON found in response');
-            }
-            return fallbackMatch[0];
-        }
-        return jsonMatch[1];
-    }
-    static parseReviewResponse(response) {
-        try {
-            const cleanJson = this.parseJsonResponse(response.content);
-            const result = JSON.parse(cleanJson);
-            if (!result.summary ||
-                !result.issues ||
-                !Array.isArray(result.issues.security) ||
-                !Array.isArray(result.issues.performance) ||
-                !Array.isArray(result.issues.typescript) ||
-                typeof result.approvalRecommended !== 'boolean' ||
-                !Array.isArray(result.suggestions?.critical) ||
-                !Array.isArray(result.suggestions?.important)) {
-                return {
-                    issues: {
-                        security: [],
-                        performance: [],
-                        typescript: [],
-                    },
-                    summary: response.content.slice(0, 500),
-                    approvalRecommended: false,
-                    suggestions: {
-                        critical: [],
-                        important: [],
-                    },
-                    usageMetadata: response.usage,
-                };
-            }
-            return {
-                issues: result.issues,
-                summary: result.summary,
-                approvalRecommended: result.approvalRecommended,
-                suggestions: result.suggestions,
-                usageMetadata: response.usage,
-            };
-        }
-        catch (error) {
-            return {
-                issues: {
-                    security: [],
-                    performance: [],
-                    typescript: [],
-                },
-                summary: response.content.slice(0, 500),
-                approvalRecommended: false,
-                suggestions: {
-                    critical: [],
-                    important: [],
-                },
-                usageMetadata: response.usage,
-            };
-        }
+    static parseSummaryResponse(text) {
+        return {
+            summary: text.content.trim(),
+            usageMetadata: text.usage,
+        };
     }
     static buildGeminiEndpoint(model) {
         return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -38291,18 +38228,11 @@ class LlmService {
     constructor(llmRepository) {
         this.llmRepository = llmRepository;
     }
-    async reviewCode(pullRequest) {
-        const prompt = LlmMapper.buildReviewPrompt(pullRequest);
-        const response = await this.llmRepository.generateContent(prompt, true);
-        return LlmMapper.parseReviewResponse(response);
-    }
-    async translateText(content, targetLanguage) {
-        if (targetLanguage.toLowerCase() === 'en') {
-            return content;
-        }
-        const prompt = LlmMapper.buildTranslationPrompt(content, targetLanguage);
-        const response = await this.llmRepository.generateContent([{ text: prompt }], false);
-        return response.content;
+    async summarizePullRequest(pullRequest, outputLanguage = 'en', commitMessages = []) {
+        const prompt = LlmMapper.buildSummaryPrompt(pullRequest, commitMessages);
+        const systemInstruction = LlmMapper.getSummarySystemInstruction(outputLanguage);
+        const response = await this.llmRepository.generateContent(prompt, false, systemInstruction);
+        return LlmMapper.parseSummaryResponse(response);
     }
 }
 
@@ -38315,32 +38245,25 @@ class LlmRepository {
         this.config = config;
     }
     mapper = LlmMapper;
-    async generateContent(prompt, returnJSON = true) {
+    async generateContent(prompt, returnJSON = true, systemInstruction) {
         core.info('Starting Gemini Service');
         if (!this.config?.apiKey) {
             throw new Error('Gemini API key is required');
         }
         const model = this.config?.model || 'gemini-2.5-flash';
         const endpoint = this.mapper.buildGeminiEndpoint(model);
-        try {
-            const response = await this.executeRequest(endpoint, prompt, returnJSON);
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-            }
-            const data = (await response.json());
-            core.info(JSON.stringify(data));
-            core.info(`Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
-        ${data?.usageMetadata?.candidatesTokenCount} completion, 
-        ${data?.usageMetadata?.totalTokenCount} total`);
-            return this.mapper.mapGeminiResponse(data, model);
+        const response = await this.executeRequest(endpoint, prompt, returnJSON, systemInstruction);
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
-        catch (error) {
-            core.error(`Error generating content: ${error}`);
-            throw error;
-        }
+        const data = (await response.json());
+        core.info(`Tokens used: ${data?.usageMetadata?.promptTokenCount} prompt, 
+      ${data?.usageMetadata?.candidatesTokenCount} completion, 
+      ${data?.usageMetadata?.totalTokenCount} total`);
+        return this.mapper.mapGeminiResponse(data, model);
     }
-    async executeRequest(endpoint, prompt, returnJSON = true) {
-        const systemInstruction = this.mapper.getSystemInstruction();
+    async executeRequest(endpoint, prompt, returnJSON = true, customSystemInstruction) {
+        const systemInstruction = customSystemInstruction || this.mapper.getSystemInstruction();
         return fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -38390,9 +38313,13 @@ class WorkflowService {
             core.info(`Analyzing PR: ${pullRequestInfo.title}`);
             const prWithContents = await this.githubService.loadFileContents(pullRequestInfo);
             core.info(`Loaded content for ${prWithContents.files.length} changed files`);
-            const reviewResult = await this.llmService.reviewCode(prWithContents);
-            core.info('Posting review results...');
-            await this.postReviewComment(prWithContents, reviewResult);
+            const commitMessages = await this.githubService.getCommitMessages(owner, repo, prNumber);
+            core.info(`Loaded ${commitMessages.length} commit messages`);
+            core.info('Generating PR summary...');
+            const outputLanguage = this.config.llm.outputLanguage || 'en';
+            const summaryResult = await this.llmService.summarizePullRequest(prWithContents, outputLanguage, commitMessages);
+            core.info('Posting summary comment...');
+            await this.postSummaryComment(prWithContents, summaryResult);
             core.info('Code review completed successfully');
         }
         catch (error) {
@@ -38400,63 +38327,14 @@ class WorkflowService {
             throw error;
         }
     }
-    async postReviewComment(pullRequest, reviewResult) {
-        let comment = this.buildReviewComment(reviewResult);
-        if (this.config.llm.outputLanguage && this.config.llm.outputLanguage !== 'en') {
-            comment = await this.llmService.translateText(comment, this.config.llm.outputLanguage);
-        }
+    async postSummaryComment(pullRequest, summaryResult) {
+        const comment = this.buildSummaryComment(summaryResult);
         await this.githubService.createReview(pullRequest.owner, pullRequest.repo, pullRequest.prNumber, pullRequest.headSha, comment);
     }
-    buildReviewComment(reviewResult) {
-        const summary = this.buildSummarySection(reviewResult);
-        const suggestions = this.buildSuggestionsSection(reviewResult);
-        const issues = this.buildIssuesSection(reviewResult);
-        const watermark = '\n\n---\n*Reviewed by flash* ✨';
-        return `${summary}\n\n${suggestions}\n\n${issues}\n${watermark}`;
-    }
-    buildSummarySection(reviewResult) {
-        return `# Flash Review \n\n${reviewResult.summary}\n\n`;
-    }
-    buildSuggestionsSection(reviewResult) {
-        const sections = [];
-        if (reviewResult.suggestions.critical.length > 0) {
-            sections.push('## Critical Issues 🚨\n' +
-                reviewResult.suggestions.critical
-                    .map((suggestion) => `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`)
-                    .join('\n'));
-        }
-        if (reviewResult.suggestions.important.length > 0) {
-            sections.push('## Important Improvements ⚠️\n' +
-                reviewResult.suggestions.important
-                    .map((suggestion) => `- **${suggestion.category}** (${suggestion.file}:${suggestion.location}):\n  ${suggestion.description}`)
-                    .join('\n'));
-        }
-        return sections.length > 0 ? sections.join('\n\n') : '';
-    }
-    buildIssuesSection(reviewResult) {
-        const sections = [];
-        if (reviewResult.issues.security.length > 0) {
-            sections.push(`## Security Issues\n${reviewResult.issues.security.map((issue) => `- ${issue}`).join('\n')}`);
-        }
-        if (reviewResult.issues.performance.length > 0) {
-            sections.push(`## Performance Issues\n${reviewResult.issues.performance.map((issue) => `- ${issue}`).join('\n')}`);
-        }
-        if (reviewResult.issues.typescript.length > 0) {
-            sections.push(`## TypeScript Issues\n${reviewResult.issues.typescript.map((issue) => `- ${issue}`).join('\n')}`);
-        }
-        return sections.length > 0 ? `\n\n${sections.join('\n\n')}` : '';
-    }
-    buildTokenUsageSection(reviewResult) {
-        if (!reviewResult.usageMetadata) {
-            return;
-        }
-        core.info(`## Token Usage
-
-| Model | Prompt Tokens | Completion Tokens | Total Tokens |
-|-------|--------------|-------------------|--------------|
-| ${this.config.llm.model} | ${reviewResult.usageMetadata.promptTokens} 
-| ${reviewResult.usageMetadata.completionTokens} 
-| ${reviewResult.usageMetadata.totalTokens} |`);
+    buildSummaryComment(summaryResult) {
+        const header = '# ✨ Flash Code Review';
+        const summary = `\n\n${summaryResult.summary}`;
+        return `${header}${summary}`;
     }
 }
 
