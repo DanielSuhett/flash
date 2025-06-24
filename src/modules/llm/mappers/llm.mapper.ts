@@ -1,5 +1,5 @@
-import { IndexedCodebase, PullRequestInfo } from '../../../types/index.js';
-import { CodeReviewResponse, GeminiResponse, LlmResponse, PullRequestSummaryResponse } from '../entities/index.js';
+import { PullRequestInfo } from '../../../types/index.js';
+import { GeminiResponse, LlmResponse, PullRequestSummaryResponse } from '../entities/index.js';
 
 export class LlmMapper {
   static getSummarySystemInstruction(outputLanguage: string = 'en'): string {
@@ -69,38 +69,6 @@ ${prSummary}
 Provide a concise technical summary focusing on purpose, implementation details and potential impact.`,
       },
     ];
-  }
-
-  static buildTranslationPrompt(content: string, targetLanguage: string): string {
-    return `Translate this code review markdown to ${targetLanguage}.
-
-RULES:
-1. Keep technical terms in English
-2. Keep code blocks unchanged
-3. Keep file paths unchanged
-4. Keep error messages in English
-5. Reduce repetition — avoid redundant or overly descriptive comments.
-6. Don't include recommendations
-7. Highlight only relevant critiques — ignore style, visual organization, or non-critical suggestions.
-8. Be objective and pragmatic — focus on what affects behavior, logic, maintainability, or reliability.
-9. Ignore "nice to have" or out-of-scope improvements.
-10. Do not overpraise — if needed, summarize positives in a single line at the end.
-
-EXPECTED OUTPUT:
-# Flash Review
-
-## Main Changes
-(Summarize the key changes introduced by the PR)
-
-## Critical Issues
-(Logic errors, runtime failures, incorrect behavior)
-
-## Risks
-(Potential fragility or areas requiring future attention)
-
-
-ORIGINAL:
-${content}`;
   }
 
   private static buildPRSummary(pullRequest: PullRequestInfo): string {
