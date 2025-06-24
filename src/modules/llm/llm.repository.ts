@@ -42,7 +42,7 @@ export class LlmRepository {
     returnJSON = true,
     customSystemInstruction?: string
   ): Promise<Response> {
-    const systemInstruction = customSystemInstruction || this.mapper.getSystemInstruction();
+    const systemInstruction = customSystemInstruction
 
     return fetch(endpoint, {
       method: 'POST',

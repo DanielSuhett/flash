@@ -11,7 +11,7 @@ export class LlmService {
     outputLanguage: string = 'en',
     commitMessages: string[] = []
   ): Promise<PullRequestSummaryResponse> {
-    const prompt = LlmMapper.buildSummaryPrompt(pullRequest, commitMessages);
+    const prompt = LlmMapper.buildSummaryPrompt(pullRequest, commitMessages, outputLanguage);
     const systemInstruction = LlmMapper.getSummarySystemInstruction(outputLanguage);
     const response = await this.llmRepository.generateContent(prompt, false, systemInstruction);
 
