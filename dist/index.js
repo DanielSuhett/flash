@@ -38083,8 +38083,13 @@ class GitHubService {
 ;// CONCATENATED MODULE: ./src/modules/llm/mappers/llm.mapper.ts
 class LlmMapper {
     static getSummarySystemInstruction(outputLanguage = 'en') {
-        const languageInstruction = outputLanguage === 'en' ? '' : `Respond in ${outputLanguage}.`;
+        const languageInstruction = `Output language is required to be in ${outputLanguage}.`;
         return `You are an expert TypeScript developer analyzing pull requests. 
+    ${languageInstruction}
+
+    Output size rules:
+    - 1500 characters max
+    - 15 paragraphs max
     
     Create a concise technical summary focusing ONLY on:
     - What this PR accomplishes (based on title and changes)
@@ -38094,30 +38099,10 @@ class LlmMapper {
     
     Be direct and technical. Ignore any code not directly changed in the PR.
     Do not mention code review, approval, or issues.
-    ${languageInstruction}
     
     Respond with plain markdown text, not JSON.`;
     }
-    static getSystemInstruction() {
-        return `You are an expert TypeScript code reviewer with 10 years of experience in developing 
-    and reviewing large-scale applications. You specialize in web application development and TypeScript type system.
-  
-  SYSTEM INSTRUCTIONS:
-  1. You MUST respond with ONLY a valid JSON object.
-  2. Do not include any markdown formatting, code blocks, or additional text outside the JSON structure.
-  3. The response must strictly follow the provided schema.
-  4. Focus on creating a concise technical summary of the PR changes and their impact.
-  5. Include implementation details, architectural decisions, and technical patterns used.
-  
-  IMPORTANT: Return ONLY a valid JSON object with this exact structure,
-  without any markdown formatting, code blocks, or additional text.
-  
-  REQUIRED RESPONSE FORMAT:
-  {
-    "summary": string
-  }`;
-    }
-    static buildSummaryPrompt(pullRequest, commitMessages = []) {
+    static buildSummaryPrompt(pullRequest, commitMessages = [], outputLanguage = 'en') {
         const prSummary = this.buildPRSummary(pullRequest);
         const commitsSection = commitMessages.length
             ? `Recent commit messages:\n${commitMessages.map((m) => `- ${m}`).join('\n')}`
@@ -38126,9 +38111,12 @@ class LlmMapper {
             .map((file) => `- ${file.filename} (${file.status}, +${file.additions}, -${file.deletions})`)
             .join('\n');
         const header = `Title: ${pullRequest.title}\n\nChanged files:\n${filesSection}`;
+        const languageInstruction = `Output language is required to be in ${outputLanguage}.`;
         return [
             {
                 text: `Analyze the following GitHub pull request.
+
+${languageInstruction}
 
 ${header}
 
@@ -38139,37 +38127,6 @@ ${prSummary}
 Provide a concise technical summary focusing on purpose, implementation details and potential impact.`,
             },
         ];
-    }
-    static buildTranslationPrompt(content, targetLanguage) {
-        return `Translate this code review markdown to ${targetLanguage}.
-
-RULES:
-1. Keep technical terms in English
-2. Keep code blocks unchanged
-3. Keep file paths unchanged
-4. Keep error messages in English
-5. Reduce repetition — avoid redundant or overly descriptive comments.
-6. Don't include recommendations
-7. Highlight only relevant critiques — ignore style, visual organization, or non-critical suggestions.
-8. Be objective and pragmatic — focus on what affects behavior, logic, maintainability, or reliability.
-9. Ignore "nice to have" or out-of-scope improvements.
-10. Do not overpraise — if needed, summarize positives in a single line at the end.
-
-EXPECTED OUTPUT:
-# Flash Review
-
-## Main Changes
-(Summarize the key changes introduced by the PR)
-
-## Critical Issues
-(Logic errors, runtime failures, incorrect behavior)
-
-## Risks
-(Potential fragility or areas requiring future attention)
-
-
-ORIGINAL:
-${content}`;
     }
     static buildPRSummary(pullRequest) {
         const MAX_PATCH_LINES = 120;
@@ -38229,7 +38186,7 @@ class LlmService {
         this.llmRepository = llmRepository;
     }
     async summarizePullRequest(pullRequest, outputLanguage = 'en', commitMessages = []) {
-        const prompt = LlmMapper.buildSummaryPrompt(pullRequest, commitMessages);
+        const prompt = LlmMapper.buildSummaryPrompt(pullRequest, commitMessages, outputLanguage);
         const systemInstruction = LlmMapper.getSummarySystemInstruction(outputLanguage);
         const response = await this.llmRepository.generateContent(prompt, false, systemInstruction);
         return LlmMapper.parseSummaryResponse(response);
@@ -38263,7 +38220,7 @@ class LlmRepository {
         return this.mapper.mapGeminiResponse(data, model);
     }
     async executeRequest(endpoint, prompt, returnJSON = true, customSystemInstruction) {
-        const systemInstruction = customSystemInstruction || this.mapper.getSystemInstruction();
+        const systemInstruction = customSystemInstruction;
         return fetch(endpoint, {
             method: 'POST',
             headers: {
