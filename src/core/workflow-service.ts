@@ -29,19 +29,7 @@ export class WorkflowService {
       core.info(`Analyzing PR: ${pullRequestInfo.title}`);
 
       const prWithContents = await this.githubService.loadFileContents(pullRequestInfo);
-      core.info(`Loaded content for ${prWithContents.files.length} changed files`);
-
-      const commitMessages = await this.githubService.getCommitMessages(owner, repo, prNumber);
-
-      core.info(`Loaded ${commitMessages.length} commit messages`);
-
-      core.info('Generating PR summary...');
-      const outputLanguage = this.config.llm.outputLanguage || 'en';
-      const summaryResult = await this.llmService.summarizePullRequest(
-        prWithContents,
-        outputLanguage,
-        commitMessages
-      );
+    
 
       core.info('Posting summary comment...');
       await this.postSummaryComment(prWithContents, summaryResult);
